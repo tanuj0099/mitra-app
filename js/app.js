@@ -15,7 +15,7 @@ const $ = (id) => document.getElementById(id);
 
 // Roles: default = face/standalone (phone). ?stage=1 = big screen (laptop)
 // that runs the camera modes on command from the face device.
-const APP_V = 9; // bump on every deploy — both devices must match to pair
+const APP_V = 10; // bump on every deploy — both devices must match to pair
 
 const params = new URLSearchParams(location.search);
 const IS_STAGE = params.has("stage");
@@ -150,12 +150,12 @@ async function handleUtterance(raw) {
 
   if (has(/follow me|look at me|watch me/)) {
     tracker.setRate(15);
-    await speak("I am watching you, my friend! Move around and I will follow.");
+    await speak("I am watching you!");
     return;
   }
   if (has(/stop (following|watching)/)) {
     tracker.setRate(6);
-    await speak("Okay, I will rest my eyes a little.");
+    await speak("Okay!");
     return;
   }
 
@@ -163,20 +163,22 @@ async function handleUtterance(raw) {
   // the coach/music still run locally — control them directly.
   if (remoteMode === "coach") {
     if (has(/switch|next|change|different exercise/)) { coach.switchExercise(); return; }
+    if (has(/piano|air music|make.*music/)) { await beginPiano(); return; }
     if (has(/\b(end|stop|done|finish|finished|enough|home|back)\b/)) {
       await coach.endSession();
       stopRemote();
-      await goHome("That was great! What next — more exercise, a story, some music, or just talk to me?");
+      await goHome("Well done! What next?");
       return;
     }
     if (has(/how am i|how did i|feedback|coach/)) { coach.askCoach(); return; }
     return;
   }
   if (remoteMode === "piano") {
+    if (has(/exercis|workout|work out|physio|stretch/)) { await beginCoach(); return; }
     if (has(/\b(stop|back|home|enough|exit|done|finish)\b/)) {
       music.stop();
       stopRemote();
-      await goHome("What beautiful music! What shall we do next?");
+      await goHome("Lovely music! What next?");
     }
     return;
   }
@@ -353,8 +355,8 @@ $("btn-wake").addEventListener("click", async () => {
   faces.home.setState("happy");
   $("mic-toggle").classList.remove("hidden");
   const greeting = hasRecognition
-    ? "Hello my friend! I am Mitra. Tap the microphone button at the bottom, and then just talk to me — say, let us exercise, or, tell me a story, or, play some music!"
-    : "Hello my friend! I am Mitra, your companion. Tap a button below and let us spend some time together!";
+    ? "Hello my friend! Tap the mic button, then just talk to me."
+    : "Hello my friend! Tap a button and let us begin.";
   setCaption(greeting);
   await speak(greeting);
   setTimeout(() => { if (currentScreen === "home") setCaption(""); }, 4000);
@@ -367,7 +369,7 @@ document.querySelectorAll("[data-mode]").forEach(btn =>
     if (mode === "coach") { beginCoach(); return; }
     show(mode);
     if (mode === "chat") startChat();
-    if (mode === "entertain") speak("Fun time! Say story, joke, riddle, music, or air music!");
+    if (mode === "entertain") speak("Pick one — story, joke, riddle, or music!");
   })
 );
 
@@ -394,7 +396,7 @@ function migrateToStage() {
   show("home");                  // remoteMode set, so show() keeps the session alive
   activeFace.setState("happy");
   resumeRemoteStream();
-  speak("Big screen connected! Keep going — watch it there, I will stay with you here.");
+  speak("Big screen on — keep going there!");
 }
 
 // The big screen disappeared mid-session — bring the picture back to the phone.
@@ -404,7 +406,7 @@ function migrateBackToPhone() {
   hudTimer = null;
   remoteMode = null;
   show(mode);
-  speak("I lost the big screen, but no problem — let us continue right here!");
+  speak("Let us continue here!");
 }
 
 function resumeRemoteStream() {
@@ -423,10 +425,24 @@ function stopRemote() {
   updateTracker();
 }
 
+// Starting any camera mode first kills whatever else is running — sessions
+// must never overlap (e.g. Air Music notes playing during exercise).
+function stopAllSessions() {
+  coach.stop();
+  music.stop();
+  clearInterval(hudTimer);
+  hudTimer = null;
+  if (remoteMode) {
+    sync.endCall();
+    remoteMode = null;
+  }
+}
+
 // Start exercise — camera and tracking always run on THIS phone; if a big
 // screen is paired, the composited canvas is streamed to it and the phone
 // keeps showing the face.
 async function beginCoach() {
+  stopAllSessions();
   if (stageConnected) {
     remoteMode = "coach";
     updateTracker();            // free the camera for the coach
@@ -441,6 +457,7 @@ async function beginCoach() {
     sync.send({ ev: "mode", mode: "coach" });
     sync.callStage($("coach-overlay").captureStream(24));
     startHudRelay();
+    speak("Watch the big screen!");
     return;
   }
   show("coach");
@@ -448,11 +465,12 @@ async function beginCoach() {
 }
 
 async function beginPiano() {
+  stopAllSessions();
   if (stageConnected) {
     remoteMode = "piano";
     updateTracker();            // free the camera for the music tracker
     activeFace.setState("happy");
-    await speak("Music time! Wave your fingers in front of my camera and watch the big screen!");
+    await speak("Wave your fingers — watch the big screen!");
     try {
       await music.start();      // runs hidden behind the face screen
     } catch (err) {
@@ -469,7 +487,7 @@ async function beginPiano() {
 
 // ---------- Chat ----------
 async function startChat() {
-  await speak(hasRecognition ? "I am listening, my friend. Talk to me!" : "Type to me, my friend!");
+  await speak(hasRecognition ? "Talk to me!" : "Type to me!");
   if (!hasRecognition) $("type-bar").classList.remove("hidden");
 }
 
@@ -545,7 +563,7 @@ const music = new AirMusic({ video: $("piano-video"), overlay: $("piano-overlay"
 async function startPiano() {
   show("piano");
   try {
-    await speak("Music time! Wave your fingers in the air. Higher hand plays higher notes. Say stop when you are done.");
+    await speak("Wave your fingers in the air — higher hand, higher note!");
     await music.start();
   } catch (err) {
     speak("I could not open my camera eye for the music. Please check camera permission.");

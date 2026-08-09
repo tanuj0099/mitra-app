@@ -63,8 +63,13 @@ export function unlockAudio() {
 let speakProxy = null;
 export function setSpeakProxy(fn) { speakProxy = fn; }
 
+let lastSpeechEndAt = 0;
+export function timeSinceSpeechEnd() { return performance.now() - lastSpeechEndAt; }
+
 export function speak(text) {
   if (speakProxy) { speakProxy(text); return Promise.resolve(); }
+  // Never listen to ourselves: kill any in-flight recognition first.
+  cancelListening();
   return new Promise((resolve) => {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
@@ -72,7 +77,14 @@ export function speak(text) {
     u.rate = RATE;
     u.pitch = PITCH;
     u.onstart = () => onSpeakStateChange(true);
-    const done = () => { onSpeakStateChange(false); resolve(); };
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      lastSpeechEndAt = performance.now();
+      onSpeakStateChange(false);
+      resolve();
+    };
     u.onend = done;
     u.onerror = done;
     speechSynthesis.speak(u);
@@ -89,11 +101,20 @@ export function stopSpeaking() {
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 export const hasRecognition = !!SR;
 
+let activeRec = null;
+export function cancelListening() {
+  if (activeRec) {
+    try { activeRec.abort(); } catch { try { activeRec.stop(); } catch {} }
+    activeRec = null;
+  }
+}
+
 // One-shot recognition: resolves with transcript string, or null on failure/silence.
 export function listenOnce({ onStateChange } = {}) {
   return new Promise((resolve) => {
     if (!SR) { resolve(null); return; }
     const rec = new SR();
+    activeRec = rec;
     rec.lang = "en-IN";
     rec.interimResults = false;
     rec.maxAlternatives = 1;
@@ -101,6 +122,7 @@ export function listenOnce({ onStateChange } = {}) {
     const finish = (val) => {
       if (settled) return;
       settled = true;
+      if (activeRec === rec) activeRec = null;
       onStateChange && onStateChange(false);
       try { rec.stop(); } catch {}
       resolve(val);

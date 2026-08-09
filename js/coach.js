@@ -155,7 +155,7 @@ export class Coach {
     this.hud.name.textContent = this.exercise.name;
     this.hud.feedback.textContent = "";
     this.setStatus("👀 Looking for you…", "wait");
-    await speak(`Let us do ${this.exercise.name}. ${this.exercise.instructions}`);
+    await speak(`${this.exercise.name}! ${this.exercise.instructions}`);
     this.loop();
   }
 
@@ -231,7 +231,7 @@ export class Coach {
           this.minSeen = 999; this.maxSeen = 0;
           this.calibReps = 0; this.calibAbove = false;
           this.setStatus("🎯 Practice time", "calib");
-          this.hint(`Perfect, I can see you! Now show me ${CALIB_REPS_NEEDED} slow practice moves so I learn your style.`);
+          this.hint("I can see you! Show me two slow practice moves.");
         }
       } else {
         this.stableFrames = 0;
@@ -282,7 +282,7 @@ export class Coach {
           this.reps = 0;
           this.hud.reps.textContent = "0";
           this.setStatus("💪 Counting!", "ok");
-          this.hint("Wonderful, I have learned your rhythm! Now for real — I will count. Begin!");
+          this.hint("Got it! Now for real — begin!");
         }
       }
       return;
@@ -385,8 +385,8 @@ export class Coach {
     const n = this.reps;
     this.stop();
     const msg = n > 0
-      ? `Fantastic session, my friend! You completed ${n} repetitions of ${this.exercise.name}. Doing this every day will keep you strong. I am so proud of you!`
-      : `That is okay, we can exercise whenever you feel ready. I am always here for you.`;
+      ? `Fantastic! ${n} repetitions — I am proud of you!`
+      : "Okay, whenever you are ready.";
     await speak(msg);
     this.resetSession();
   }
