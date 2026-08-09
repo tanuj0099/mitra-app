@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Mitra — Your Companion</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=9" />
 </head>
 <body>
 
@@ -21,9 +21,18 @@
   <!-- Boot screen: unlocks audio/TTS on iOS with a user gesture -->
   <section id="screen-boot" class="screen active">
     <canvas id="boot-face" class="face-canvas"></canvas>
-    <input id="room-input" class="room-input hidden" maxlength="6" placeholder="CODE" autocomplete="off" autocapitalize="characters" />
     <button id="btn-wake" class="big-cta">Tap to wake Mitra</button>
   </section>
+
+  <!-- Stage (laptop) pairing modal: enter the phone's 4-letter code once -->
+  <div id="stage-code-modal" class="modal hidden">
+    <div class="modal-card code-card">
+      <h2>🖥 Big screen</h2>
+      <p class="hint">Enter the 4-letter code shown in Mitra's ⚙️ settings on the phone</p>
+      <input id="room-input" class="room-input" maxlength="6" placeholder="CODE" autocomplete="off" autocapitalize="characters" />
+      <button id="btn-stage-go" class="pill-btn accent">Enter</button>
+    </div>
+  </div>
 
   <!-- Home: full-screen face + minimal icon nav -->
   <section id="screen-home" class="screen">
@@ -118,6 +127,7 @@
   <div id="settings-modal" class="modal hidden">
     <div class="modal-card">
       <h2>Settings</h2>
+      <div class="code-row">🖥 Big screen code: <b id="room-code">—</b></div>
       <label>Mitra's voice
         <div class="voice-row">
           <select id="voice-select"></select>
@@ -133,12 +143,12 @@
         <button id="btn-clear-key" class="pill-btn danger">Clear key</button>
         <button id="btn-close-settings" class="pill-btn">Close</button>
       </div>
-      <p class="hint">Big screen code: <b id="room-code"></b> — open the app with <code>?stage=1</code> on the laptop and enter this code.</p>
+      <p class="hint">For the big screen: open the app with <code>?stage=1</code> on the laptop and enter the code above.</p>
       <p class="hint">Voice input needs Siri &amp; Dictation enabled on iPhone. Camera needs HTTPS.</p>
     </div>
   </div>
 
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script type="module" src="js/app.js?v=8"></script>
+  <script type="module" src="js/app.js?v=9"></script>
 </body>
 </html>

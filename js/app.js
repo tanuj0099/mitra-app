@@ -15,7 +15,7 @@ const $ = (id) => document.getElementById(id);
 
 // Roles: default = face/standalone (phone). ?stage=1 = big screen (laptop)
 // that runs the camera modes on command from the face device.
-const APP_V = 8; // bump on every deploy — both devices must match to pair
+const APP_V = 9; // bump on every deploy — both devices must match to pair
 
 const params = new URLSearchParams(location.search);
 const IS_STAGE = params.has("stage");
@@ -319,24 +319,31 @@ function startSync() {
     });
   }
 }
-// The phone registers for pairing immediately; the stage needs its code first.
+// The phone registers for pairing immediately; the stage asks for the
+// phone's code in a centered modal, then joins on Enter.
 if (!IS_STAGE) startSync();
 else {
+  $("btn-wake").classList.add("hidden");
+  $("stage-code-modal").classList.remove("hidden");
   const inp = $("room-input");
-  inp.classList.remove("hidden");
   inp.value = ROOM || "";
+  setTimeout(() => inp.focus(), 100);
+
+  const joinStage = () => {
+    const code = inp.value.trim().toUpperCase();
+    if (code.length < 3) { inp.focus(); return; }
+    ROOM = code;
+    localStorage.setItem("mitra_stage_room", code);
+    $("stage-code-modal").classList.add("hidden");
+    startSync();
+    show("stage");
+  };
+  $("btn-stage-go").addEventListener("click", joinStage);
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") joinStage(); });
 }
 
 $("btn-wake").addEventListener("click", async () => {
-  if (IS_STAGE) {
-    const code = $("room-input").value.trim().toUpperCase();
-    if (!code) { $("room-input").focus(); return; }
-    ROOM = code;
-    localStorage.setItem("mitra_stage_room", code);
-    startSync();
-    show("stage");
-    return;
-  }
+  if (IS_STAGE) return;
   unlockAudio();
   if ("wakeLock" in navigator) {
     try { await navigator.wakeLock.request("screen"); } catch {}
