@@ -88,6 +88,9 @@ export function initStageSync(room, { onData, onStream, onCallEnd, onStatus }) {
   return {
     send: (obj) => { if (conn && conn.open) conn.send(obj); },
     isConnected: () => !!(conn && conn.open),
+    // Drop the current connection and reconnect (used when we reached a
+    // stale ghost session that never completes the handshake).
+    retryNow: () => { try { if (conn) conn.close(); } catch {} },
   };
 }
 

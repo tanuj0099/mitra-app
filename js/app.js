@@ -15,11 +15,29 @@ const $ = (id) => document.getElementById(id);
 
 // Roles: default = face/standalone (phone). ?stage=1 = big screen (laptop)
 // that runs the camera modes on command from the face device.
-const APP_V = 7; // bump on every deploy — both devices must match to pair
+const APP_V = 8; // bump on every deploy — both devices must match to pair
 
 const params = new URLSearchParams(location.search);
 const IS_STAGE = params.has("stage");
-const ROOM = params.get("room") || "demo";
+
+// Pairing: every phone owns a unique 4-letter code (shown in ⚙️ settings);
+// the laptop enters it once. A shared fixed id would collide with any other
+// copy of the app running anywhere (teammates' phones, old tabs...).
+const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function makeCode() {
+  let c = "";
+  for (let i = 0; i < 4; i++) c += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  return c;
+}
+function getRoom() {
+  const fromUrl = params.get("room");
+  if (fromUrl) return fromUrl.toUpperCase();
+  if (IS_STAGE) return (localStorage.getItem("mitra_stage_room") || "").toUpperCase() || null;
+  let r = localStorage.getItem("mitra_room");
+  if (!r) { r = makeCode(); localStorage.setItem("mitra_room", r); }
+  return r;
+}
+let ROOM = getRoom();
 let sync = null;
 let stageConnected = false;
 let remoteMode = null; // face-side: which mode the stage is currently running
@@ -267,7 +285,8 @@ function startSync() {
           clearTimeout(helloTimer);
           helloTimer = setTimeout(() => {
             $("stage-status").textContent =
-              "⚠️ Reached an old Mitra session. Close ALL Mitra tabs on the phone, reopen ONE, then refresh this page.";
+              "⚠️ Reached a stale Mitra session — retrying automatically. Make sure the phone shows its code in ⚙️ settings and it matches.";
+            setTimeout(() => { if (sync) sync.retryNow(); }, 4000);
           }, 3000);
           return;
         }
@@ -300,11 +319,21 @@ function startSync() {
     });
   }
 }
-// Register for pairing immediately — no need to wake first
-startSync();
+// The phone registers for pairing immediately; the stage needs its code first.
+if (!IS_STAGE) startSync();
+else {
+  const inp = $("room-input");
+  inp.classList.remove("hidden");
+  inp.value = ROOM || "";
+}
 
 $("btn-wake").addEventListener("click", async () => {
   if (IS_STAGE) {
+    const code = $("room-input").value.trim().toUpperCase();
+    if (!code) { $("room-input").focus(); return; }
+    ROOM = code;
+    localStorage.setItem("mitra_stage_room", code);
+    startSync();
     show("stage");
     return;
   }
@@ -610,6 +639,7 @@ $("btn-test-voice").addEventListener("click", () => {
 
 $("btn-settings").addEventListener("click", () => {
   $("api-key-input").value = getApiKey();
+  $("room-code").textContent = ROOM || "";
   refreshApiStatus();
   refreshVoiceList();
   modal.classList.remove("hidden");

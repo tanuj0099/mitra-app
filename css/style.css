@@ -47,6 +47,20 @@ html, body {
 .rotate-inner p { font-size: 1.2rem; opacity: 0.85; }
 
 /* Boot */
+.room-input {
+  position: absolute;
+  bottom: 24%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 9rem;
+  padding: 0.7rem;
+  text-align: center;
+  font-size: 1.4rem;
+  letter-spacing: 0.35rem;
+  border-radius: 0.7rem;
+  border: none;
+  text-transform: uppercase;
+}
 .big-cta {
   position: absolute;
   bottom: 8%;
