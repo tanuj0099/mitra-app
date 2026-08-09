@@ -23,10 +23,12 @@ function angleBetween(a, b, c) {
   return (Math.acos(Math.min(1, Math.max(-1, dot / (m1 * m2)))) * 180) / Math.PI;
 }
 
+// All exercises are wheelchair-accessible: seated, upper-body only, and
+// they work with one arm if the other is limited (max of both sides).
 const EXERCISES = [
   {
-    name: "Seated Arm Raises",
-    instructions: "Sit facing me so I can see your head, arms and hips. Raise both arms out and up like wings, then bring them down slowly.",
+    name: "Arm Raises",
+    instructions: "Face me so I can see your head, arms and hips. Raise your arms out to the side like wings, then bring them down slowly.",
     needed: [L.LS, L.RS, L.LE, L.RE, L.LH, L.RH],
     framingHint: "I need to see your arms and hips — move back a little.",
     activeJoints: [L.LS, L.RS],
@@ -35,20 +37,45 @@ const EXERCISES = [
       const right = angleBetween(lm[L.RH], lm[L.RS], lm[L.RE]);
       return Math.max(left, right);
     },
-    tipLow: "Try to lift your arms a little higher, like a bird spreading its wings!",
   },
   {
-    name: "Seated Knee Extensions",
-    instructions: "Turn slightly sideways so I can see your legs. Straighten one knee out in front of you, hold, then lower it.",
-    needed: [L.LH, L.RH, L.LK, L.RK, L.LA, L.RA],
-    framingHint: "I need to see your legs down to the ankles — tilt me down or move back.",
-    activeJoints: [L.LK, L.RK],
+    name: "Elbow Curls",
+    instructions: "Face me with your arms relaxed. Bend your elbows to bring your hands up towards your shoulders, then lower them slowly.",
+    needed: [L.LS, L.RS, L.LE, L.RE, L.LW, L.RW],
+    framingHint: "I need to see your arms down to the wrists — move back a little.",
+    activeJoints: [L.LE, L.RE],
     metric(lm) {
-      const left = angleBetween(lm[L.LH], lm[L.LK], lm[L.LA]);
-      const right = angleBetween(lm[L.RH], lm[L.RK], lm[L.RA]);
+      // higher = more curled
+      const left = 180 - angleBetween(lm[L.LS], lm[L.LE], lm[L.LW]);
+      const right = 180 - angleBetween(lm[L.RS], lm[L.RE], lm[L.RW]);
       return Math.max(left, right);
     },
-    tipLow: "Try to straighten your knee fully, push your foot forward!",
+  },
+  {
+    name: "Overhead Reach",
+    instructions: "Face me and reach your hands up towards the sky as high as feels comfortable, then bring them down slowly.",
+    needed: [L.LS, L.RS, L.LW, L.RW, L.LH, L.RH],
+    framingHint: "I need to see your hands even when raised — move back a little.",
+    activeJoints: [L.LS, L.RS],
+    metric(lm) {
+      const left = angleBetween(lm[L.LH], lm[L.LS], lm[L.LW]);
+      const right = angleBetween(lm[L.RH], lm[L.RS], lm[L.RW]);
+      return Math.max(left, right);
+    },
+  },
+  {
+    name: "Side Bends",
+    instructions: "Sit tall facing me. Lean your upper body gently to one side, come back up, then lean to the other side.",
+    needed: [L.LS, L.RS, L.LH, L.RH],
+    framingHint: "I need to see your shoulders and hips — move back a little.",
+    activeJoints: [L.LS, L.RS],
+    minRange: 10,
+    metric(lm) {
+      // torso tilt from vertical, in degrees
+      const ms = { x: (lm[L.LS].x + lm[L.RS].x) / 2, y: (lm[L.LS].y + lm[L.RS].y) / 2 };
+      const mh = { x: (lm[L.LH].x + lm[L.RH].x) / 2, y: (lm[L.LH].y + lm[L.RH].y) / 2 };
+      return Math.abs(Math.atan2(ms.x - mh.x, mh.y - ms.y) * 180 / Math.PI);
+    },
   },
 ];
 
@@ -220,7 +247,7 @@ export class Coach {
     const range = this.maxSeen - this.minSeen;
 
     if (this.state === "calibrating") {
-      if (range < MIN_RANGE_DEG) { this.updateBar(0); return; }
+      if (range < (this.exercise.minRange || MIN_RANGE_DEG)) { this.updateBar(0); return; }
       const mid = this.minSeen + range / 2;
       this.updateBar((angle - this.minSeen) / range);
       if (!this.calibAbove && angle > mid + range * 0.15) {

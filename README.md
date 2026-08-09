@@ -12,8 +12,10 @@ the robot body, runs this web app.
 - **💬 Companion chat** — tap-to-talk voice conversation with a warm caregiver
   personality (typed input as fallback).
 - **🏋️ Exercise coach** — camera + on-device pose detection (MediaPipe) with a
-  live skeleton overlay, automatic rep counting for seated arm raises and knee
-  extensions, spoken counts, and AI form feedback.
+  live skeleton overlay and automatic rep counting for wheelchair-accessible,
+  upper-body exercises (arm raises, elbow curls, overhead reach, side bends).
+  Guided framing check, 2 practice reps to learn the user's own range of
+  motion, spoken counts, and AI form feedback.
 - **🎵 Entertainment** — stories, jokes, riddles, and a cheerful tune.
 
 ## Two modes
