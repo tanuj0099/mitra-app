@@ -24,27 +24,24 @@
     <button id="btn-wake" class="big-cta">Tap to wake Mitra</button>
   </section>
 
-  <!-- Home: full-screen face + mode buttons -->
+  <!-- Home: full-screen face + minimal icon nav -->
   <section id="screen-home" class="screen">
     <canvas id="home-face" class="face-canvas"></canvas>
-    <div id="home-caption" class="caption"></div>
-    <nav id="home-nav">
-      <button class="mode-btn" data-mode="chat">💬<span>Talk to me</span></button>
-      <button class="mode-btn" data-mode="coach">🏋️<span>Exercise</span></button>
-      <button class="mode-btn" data-mode="entertain">🎵<span>Entertain me</span></button>
+    <nav id="home-nav" class="icon-nav">
+      <button class="mode-btn" data-mode="chat" title="Talk">💬</button>
+      <button class="mode-btn" data-mode="coach" title="Exercise">🏋️</button>
+      <button class="mode-btn" data-mode="entertain" title="Fun">🎵</button>
     </nav>
     <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
   </section>
 
-  <!-- Chat: face + captions + mic -->
+  <!-- Chat: face + typed fallback -->
   <section id="screen-chat" class="screen">
     <canvas id="chat-face" class="face-canvas"></canvas>
-    <div id="chat-caption" class="caption"></div>
-    <div id="chat-user-line" class="user-line"></div>
-    <div class="chat-controls">
-      <button id="btn-mic" class="round-btn mic">🎤</button>
-      <button id="btn-type" class="round-btn small" title="Type instead">⌨️</button>
-    </div>
+    <nav class="icon-nav">
+      <button id="btn-mic" class="mode-btn" title="Speak once">🎤</button>
+      <button id="btn-type" class="mode-btn" title="Type instead">⌨️</button>
+    </nav>
     <div id="type-bar" class="type-bar hidden">
       <input id="type-input" type="text" placeholder="Type your message…" autocomplete="off" />
       <button id="type-send">➤</button>
@@ -63,10 +60,10 @@
       <div id="coach-bar"><div id="coach-bar-fill"></div></div>
       <div id="coach-feedback">Loading pose model…</div>
     </div>
-    <div class="coach-controls">
-      <button id="btn-switch-exercise" class="pill-btn">Switch exercise</button>
-      <button id="btn-ask-coach" class="pill-btn accent">Ask coach 🧠</button>
-      <button id="btn-end-session" class="pill-btn danger">End session</button>
+    <div class="coach-controls icon-nav">
+      <button id="btn-switch-exercise" class="mode-btn" title="Switch exercise">🔄</button>
+      <button id="btn-ask-coach" class="mode-btn" title="Ask coach">🧠</button>
+      <button id="btn-end-session" class="mode-btn" title="End session">✖</button>
     </div>
     <button class="icon-btn back" data-back>←</button>
   </section>
@@ -74,13 +71,12 @@
   <!-- Entertain -->
   <section id="screen-entertain" class="screen">
     <canvas id="ent-face" class="face-canvas"></canvas>
-    <div id="ent-caption" class="caption"></div>
-    <nav id="ent-nav">
-      <button class="ent-btn" data-ent="story">📖<span>Story</span></button>
-      <button class="ent-btn" data-ent="joke">😄<span>Joke</span></button>
-      <button class="ent-btn" data-ent="riddle">🧩<span>Riddle</span></button>
-      <button class="ent-btn" data-ent="tune">🎶<span>Play a tune</span></button>
-      <button class="ent-btn" data-ent="piano">🎶<span>Air Music</span></button>
+    <nav id="ent-nav" class="icon-nav">
+      <button class="ent-btn" data-ent="story" title="Story">📖</button>
+      <button class="ent-btn" data-ent="joke" title="Joke">😄</button>
+      <button class="ent-btn" data-ent="riddle" title="Riddle">🧩</button>
+      <button class="ent-btn" data-ent="tune" title="Tune">🎼</button>
+      <button class="ent-btn" data-ent="piano" title="Air Music">🎹</button>
     </nav>
     <button class="icon-btn back" data-back>←</button>
   </section>
@@ -113,7 +109,6 @@
 
   <!-- Global mic toggle (tap on = keeps listening, tap off = stops) -->
   <button id="mic-toggle" class="hidden" title="Toggle microphone">🎤</button>
-  <div id="voice-toast" class="hidden"></div>
 
   <!-- Settings modal -->
   <div id="settings-modal" class="modal hidden">
@@ -139,6 +134,6 @@
   </div>
 
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script type="module" src="js/app.js?v=4"></script>
+  <script type="module" src="js/app.js?v=5"></script>
 </body>
 </html>

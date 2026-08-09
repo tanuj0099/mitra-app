@@ -13,7 +13,7 @@ const $ = (id) => document.getElementById(id);
 
 // Roles: default = face/standalone (phone). ?stage=1 = big screen (laptop)
 // that runs the camera modes on command from the face device.
-const APP_V = 4; // bump on every deploy — both devices must match to pair
+const APP_V = 5; // bump on every deploy — both devices must match to pair
 
 const params = new URLSearchParams(location.search);
 const IS_STAGE = params.has("stage");
@@ -100,18 +100,9 @@ initSpeech((speaking) => {
   if (faces[currentScreen]) activeFace.setState(speaking ? "speaking" : "idle");
 });
 
-function showHeard(text) {
-  const toast = $("voice-toast");
-  toast.textContent = `🗣 "${text}"`;
-  toast.classList.remove("hidden");
-  clearTimeout(showHeard._t);
-  showHeard._t = setTimeout(() => toast.classList.add("hidden"), 4000);
-}
-
 async function handleUtterance(raw) {
   const t = raw.toLowerCase();
   const has = (re) => re.test(t);
-  showHeard(raw);
 
   // While a session streams to the big screen, the phone shows the face but
   // the coach/music still run locally — control them directly.
@@ -253,7 +244,7 @@ $("btn-wake").addEventListener("click", async () => {
 });
 
 // ---------- Home nav (touch remains as backup) ----------
-document.querySelectorAll(".mode-btn").forEach(btn =>
+document.querySelectorAll("[data-mode]").forEach(btn =>
   btn.addEventListener("click", async () => {
     const mode = btn.dataset.mode;
     if (mode === "coach") { beginCoach(); return; }
@@ -338,18 +329,13 @@ async function beginPiano() {
 
 // ---------- Chat ----------
 async function startChat() {
-  $("chat-caption").textContent = "";
-  $("chat-user-line").textContent = "";
   await speak(hasRecognition ? "I am listening, my friend. Talk to me!" : "Type to me, my friend!");
   if (!hasRecognition) $("type-bar").classList.remove("hidden");
 }
 
 async function handleUserText(text) {
   if (!text || !text.trim()) return;
-  if (currentScreen === "chat") $("chat-user-line").textContent = `You: ${text}`;
-  setCaption("…");
   const reply = await chatReply(text.trim());
-  setCaption(reply);
   await speak(reply);
 }
 
@@ -363,10 +349,7 @@ $("btn-mic").addEventListener("click", async () => {
     },
   });
   if (text) handleUserText(text);
-  else if (!hasRecognition) {
-    $("type-bar").classList.remove("hidden");
-    $("chat-caption").textContent = "I could not hear you — type to me instead!";
-  }
+  else if (!hasRecognition) $("type-bar").classList.remove("hidden");
 });
 
 $("btn-type").addEventListener("click", () => {
@@ -433,29 +416,23 @@ async function startPiano() {
 // ---------- Entertainment ----------
 async function doEnt(kind) {
   stopSpeaking();
-  const cap = $("ent-caption");
   if (kind === "piano") { await beginPiano(); return; }
   if (kind === "story") {
-    cap.textContent = "Let me think of a nice story…";
+    await speak("Let me think of a nice story for you.");
     const story = await getStory();
-    cap.textContent = story;
     await speak(story);
     activeFace.setState("happy");
   } else if (kind === "joke") {
     const joke = await getJoke();
-    cap.textContent = joke;
     await speak(joke);
     activeFace.setState("happy");
   } else if (kind === "riddle") {
     const r = getRiddle();
-    cap.textContent = r.q;
     await speak(`Here is a riddle! ${r.q}`);
     await new Promise(res => setTimeout(res, 6000));
-    cap.textContent = `${r.q} — ${r.a}`;
     await speak(`The answer is: ${r.a}`);
     activeFace.setState("happy");
   } else if (kind === "tune") {
-    cap.textContent = "🎶";
     await playTune();
   }
 }

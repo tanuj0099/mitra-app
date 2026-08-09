@@ -1,6 +1,6 @@
-// Animated robot face rendered on a canvas — cute edition: big glossy eyes
-// with glints, pink cheeks, a gentle bob, and a happy little mouth.
-// States: idle (blinks), listening (wide eyes), speaking (mouth wobbles), happy (squint smile).
+// Animated robot face on a canvas: big oval eyes with a soft glint, a small
+// mouth, gentle bobbing. States: idle (blinks), listening (wide eyes),
+// speaking (mouth wobbles), happy (crescent squint smile).
 
 export class RobotFace {
   constructor(canvas) {
@@ -56,84 +56,61 @@ export class RobotFace {
 
     // gentle floating bob
     const bob = Math.sin((t || 0) * 0.0016) * h * 0.012;
-    const cx = w / 2, cy = h * 0.42 + bob;
-    const eyeW = w * 0.14, eyeGap = w * 0.105;
-    let eyeH = h * 0.30;
-    if (this.state === "listening") eyeH *= 1.12;
-    if (this.state === "happy") eyeH *= 0.55;
-    const openness = 1 - this.blink * 0.92;
+    const cx = w / 2, cy = h * 0.45 + bob;
+    const eyeRx = w * 0.095;
+    let eyeRy = h * 0.3;
+    if (this.state === "listening") eyeRy *= 1.1;
+    const openness = Math.max(0.06, 1 - this.blink * 0.94);
 
     for (const side of [-1, 1]) {
-      const ex = cx + side * (eyeGap + eyeW / 2);
-      const eh = eyeH * openness;
+      const ex = cx + side * w * 0.15;
+      const ry = eyeRy * (this.state === "happy" ? 1 : openness);
 
-      // eye
+      // big oval eye
       ctx.fillStyle = "#37e0ff";
-      ctx.shadowColor = "rgba(55,224,255,0.75)";
-      ctx.shadowBlur = w * 0.025;
-      this.roundRect(ex - eyeW / 2, cy - eh / 2, eyeW, eh, Math.min(eyeW, eh) * 0.5);
+      ctx.shadowColor = "rgba(55,224,255,0.7)";
+      ctx.shadowBlur = w * 0.02;
+      ctx.beginPath();
+      ctx.ellipse(ex, cy, eyeRx, ry, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.shadowBlur = 0;
 
       if (this.state === "happy") {
-        // carve a smile-squint from the bottom of each eye
+        // crescent squint: carve away the lower part of the eye
         ctx.save();
         ctx.globalCompositeOperation = "destination-out";
         ctx.beginPath();
-        ctx.ellipse(ex, cy + eh * 0.65, eyeW * 0.75, eh * 0.55, 0, 0, Math.PI * 2);
+        ctx.ellipse(ex, cy + ry * 0.5, eyeRx * 1.15, ry * 0.75, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       } else if (openness > 0.4) {
-        // glossy glints
-        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        // single soft glint
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
         ctx.beginPath();
-        ctx.ellipse(ex - eyeW * 0.18, cy - eh * 0.22, eyeW * 0.11, eh * 0.09, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,0.55)";
-        ctx.beginPath();
-        ctx.ellipse(ex + eyeW * 0.14, cy + eh * 0.12, eyeW * 0.055, eh * 0.045, 0, 0, Math.PI * 2);
+        ctx.ellipse(ex - eyeRx * 0.3, cy - ry * 0.35, eyeRx * 0.18, ry * 0.1, 0, 0, Math.PI * 2);
         ctx.fill();
       }
-
-      // pink cheek blush
-      ctx.fillStyle = "rgba(255, 143, 163, 0.35)";
-      ctx.beginPath();
-      ctx.ellipse(ex + side * eyeW * 0.25, cy + eyeH * 0.62, eyeW * 0.34, eyeH * 0.13, 0, 0, Math.PI * 2);
-      ctx.fill();
     }
 
-    // Mouth
-    const my = h * 0.72 + bob;
+    // small mouth
+    const my = h * 0.8 + bob;
     ctx.strokeStyle = "#37e0ff";
-    ctx.lineWidth = Math.max(4, h * 0.014);
+    ctx.lineWidth = Math.max(3, h * 0.011);
     ctx.lineCap = "round";
     ctx.beginPath();
     if (this.state === "speaking") {
-      // wobbling waveform mouth
-      const mw = w * 0.16;
-      const seg = 14;
+      const mw = w * 0.1;
+      const seg = 10;
       for (let i = 0; i <= seg; i++) {
         const x = cx - mw / 2 + (mw / seg) * i;
-        const y = my + Math.sin(this.mouthPhase + i * 0.9) * h * 0.03 * (0.4 + Math.random() * 0.6);
+        const y = my + Math.sin(this.mouthPhase + i * 0.9) * h * 0.02 * (0.4 + Math.random() * 0.6);
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
     } else if (this.state === "happy") {
-      ctx.arc(cx, my - h * 0.045, w * 0.095, 0.12 * Math.PI, 0.88 * Math.PI);
+      ctx.arc(cx, my - h * 0.03, w * 0.055, 0.15 * Math.PI, 0.85 * Math.PI);
     } else {
-      // small contented smile
-      ctx.arc(cx, my - h * 0.055, w * 0.075, 0.18 * Math.PI, 0.82 * Math.PI);
+      ctx.arc(cx, my - h * 0.035, w * 0.04, 0.2 * Math.PI, 0.8 * Math.PI);
     }
     ctx.stroke();
-  }
-
-  roundRect(x, y, w, h, r) {
-    const ctx = this.ctx;
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
   }
 }
