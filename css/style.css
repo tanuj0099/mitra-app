@@ -200,6 +200,12 @@ html, body {
 }
 #stage-feedback { font-size: 1.2rem; color: var(--accent); min-height: 1.4em; }
 
+#btn-robot.connected {
+  opacity: 1;
+  background: rgba(55, 224, 255, 0.2);
+  box-shadow: 0 0 15px rgba(55, 224, 255, 0.5);
+}
+
 /* Stage (big screen) idle */
 .stage-idle {
   position: absolute;

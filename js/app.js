@@ -8,12 +8,14 @@ import { Coach } from "./coach.js";
 import { AirMusic } from "./piano.js";
 import { VoiceLoop } from "./voice.js";
 import { initFaceSync, initStageSync } from "./sync.js";
+import { PersonTracker } from "./tracker.js";
+import { RobotLink, hasBluetooth } from "./robot.js";
 
 const $ = (id) => document.getElementById(id);
 
 // Roles: default = face/standalone (phone). ?stage=1 = big screen (laptop)
 // that runs the camera modes on command from the face device.
-const APP_V = 5; // bump on every deploy — both devices must match to pair
+const APP_V = 6; // bump on every deploy — both devices must match to pair
 
 const params = new URLSearchParams(location.search);
 const IS_STAGE = params.has("stage");
@@ -58,6 +60,7 @@ function show(name) {
     activeFace.setState("idle");
     activeFace.start();
   }
+  updateTracker();
 }
 
 document.querySelectorAll("[data-back]").forEach(btn =>
@@ -100,9 +103,42 @@ initSpeech((speaking) => {
   if (faces[currentScreen]) activeFace.setState(speaking ? "speaking" : "idle");
 });
 
+// ---------- DUO head tracking (phone side) ----------
+// Presence mode runs quietly whenever the camera is free; "follow me" raises
+// the tracking rate. Positions stream over sync to the stage, which forwards
+// them to the ESP32 over Bluetooth. See firmware/README.md.
+const tracker = new PersonTracker();
+let woken = false;
+
+function onTrack(u) {
+  if (u.state === "FOUND" && faces[currentScreen] && currentScreen === "home") {
+    activeFace.setState("happy");
+    setTimeout(() => { if (currentScreen === "home") activeFace.setState("idle"); }, 1500);
+  }
+  if (sync) sync.send({ ev: "track", x: u.x, state: u.state });
+}
+
+function updateTracker() {
+  const camBusy = currentScreen === "coach" || currentScreen === "piano" || remoteMode;
+  const shouldRun = !IS_STAGE && woken && !camBusy;
+  if (shouldRun && !tracker.running) tracker.start(onTrack).catch(() => {});
+  else if (!shouldRun && tracker.running) tracker.stop();
+}
+
 async function handleUtterance(raw) {
   const t = raw.toLowerCase();
   const has = (re) => re.test(t);
+
+  if (has(/follow me|look at me|watch me/)) {
+    tracker.setRate(15);
+    await speak("I am watching you, my friend! Move around and I will follow.");
+    return;
+  }
+  if (has(/stop (following|watching)/)) {
+    tracker.setRate(6);
+    await speak("Okay, I will rest my eyes a little.");
+    return;
+  }
 
   // While a session streams to the big screen, the phone shows the face but
   // the coach/music still run locally — control them directly.
@@ -161,6 +197,26 @@ async function handleUtterance(raw) {
 // ---------- Boot & device pairing ----------
 if (IS_STAGE) $("btn-wake").textContent = "🖥 Start display screen";
 
+// Robot BLE link (stage/laptop only — iPhone Safari has no Web Bluetooth)
+const robot = IS_STAGE ? new RobotLink({
+  onStatus: (s) => $("btn-robot").classList.toggle("connected", s === "connected"),
+}) : null;
+
+if (IS_STAGE) {
+  $("btn-robot").addEventListener("click", async () => {
+    if (!hasBluetooth) {
+      $("stage-status").textContent = "⚠️ This browser has no Web Bluetooth — use Chrome on the laptop.";
+      return;
+    }
+    if (robot.connected) { robot.disconnect(); return; }
+    try {
+      await robot.connect();
+    } catch (e) {
+      $("stage-status").textContent = "🤖 Robot connection cancelled or failed — is DUO-HEAD powered on?";
+    }
+  });
+}
+
 function stageShowIdle() {
   $("stage-video").srcObject = null;
   $("stage-hud").classList.add("hidden");
@@ -188,6 +244,8 @@ function startSync() {
           $("stage-reps").textContent = d.reps || "0";
           $("stage-bar-fill").style.width = d.bar || "0%";
           $("stage-feedback").textContent = d.feedback || "";
+        } else if (d.ev === "track" && robot && robot.connected) {
+          robot.send(d.state === "TRACKING" ? `X:${d.x.toFixed(2)}` : "LOST");
         }
       },
       onStream: (s) => {
@@ -232,6 +290,7 @@ $("btn-wake").addEventListener("click", async () => {
   if ("wakeLock" in navigator) {
     try { await navigator.wakeLock.request("screen"); } catch {}
   }
+  woken = true;
   show("home");
   faces.home.setState("happy");
   $("mic-toggle").classList.remove("hidden");
@@ -283,6 +342,7 @@ function stopRemote() {
   sync.endCall();
   sync.send({ ev: "mode", mode: "home" });
   remoteMode = null;
+  updateTracker();
 }
 
 // Start exercise — camera and tracking always run on THIS phone; if a big
@@ -291,6 +351,7 @@ function stopRemote() {
 async function beginCoach() {
   if (stageConnected) {
     remoteMode = "coach";
+    updateTracker();            // free the camera for the coach
     activeFace.setState("happy");
     try {
       await coach.start();      // runs hidden behind the face screen
@@ -311,6 +372,7 @@ async function beginCoach() {
 async function beginPiano() {
   if (stageConnected) {
     remoteMode = "piano";
+    updateTracker();            // free the camera for the music tracker
     activeFace.setState("happy");
     await speak("Music time! Wave your fingers in front of my camera and watch the big screen!");
     try {
