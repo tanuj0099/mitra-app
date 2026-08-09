@@ -1,7 +1,7 @@
 // Mitra companion robot — main app: screens, navigation, chat, entertainment, settings.
 
 import { RobotFace } from "./face.js";
-import { initSpeech, unlockAudio, speak, stopSpeaking, listenOnce, hasRecognition } from "./speech.js";
+import { initSpeech, unlockAudio, speak, stopSpeaking, listenOnce, hasRecognition, listVoices, setVoice } from "./speech.js";
 import { chatReply, getStory, getJoke, getRiddle, getApiKey, setApiKey, testApiKey, hasApiKey } from "./claude.js";
 import { Coach } from "./coach.js";
 
@@ -220,9 +220,36 @@ function refreshApiStatus() {
   }
 }
 
+function refreshVoiceList() {
+  const sel = $("voice-select");
+  const voices = listVoices();
+  sel.innerHTML = "";
+  if (!voices.length) {
+    sel.innerHTML = "<option>System default</option>";
+    return;
+  }
+  for (const v of voices) {
+    const opt = document.createElement("option");
+    opt.value = v.name;
+    opt.textContent = `${v.name} (${v.lang})`;
+    opt.selected = v.selected;
+    sel.appendChild(opt);
+  }
+}
+
+$("voice-select").addEventListener("change", (e) => {
+  setVoice(e.target.value);
+  speak("Hello my friend! Do you like this voice?");
+});
+$("btn-test-voice").addEventListener("click", () => {
+  setVoice($("voice-select").value);
+  speak("Hello my friend! I am Mitra. Do you like this voice?");
+});
+
 $("btn-settings").addEventListener("click", () => {
   $("api-key-input").value = getApiKey();
   refreshApiStatus();
+  refreshVoiceList();
   modal.classList.remove("hidden");
 });
 $("btn-close-settings").addEventListener("click", () => modal.classList.add("hidden"));

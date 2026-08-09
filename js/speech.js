@@ -1,20 +1,55 @@
 // Text-to-speech + speech recognition wrappers (Web Speech API).
 // iOS Safari: TTS must be unlocked by a user gesture; recognition needs Siri & Dictation enabled.
+// Voice quality tip: iOS "Enhanced"/"Premium" voices (downloadable under
+// Settings > Accessibility > Spoken Content > Voices) show up here too.
 
+const VOICE_STORAGE = "mitra_voice";
 let voice = null;
 let onSpeakStateChange = () => {};
 
+// Soft, friendly delivery: slightly high pitch, unhurried rate.
+const PITCH = 1.25;
+const RATE = 0.92;
+
+function rankVoice(v) {
+  let score = 0;
+  if (/en[-_]IN/i.test(v.lang)) score += 4;              // Indian English first
+  if (/enhanced|premium|natural/i.test(v.name)) score += 3;
+  if (/Veena|Samantha|Karen|Moira|Tessa/i.test(v.name)) score += 2;
+  if (v.lang.startsWith("en")) score += 1;
+  return score;
+}
+
+function pickVoice() {
+  const voices = speechSynthesis.getVoices();
+  if (!voices.length) return;
+  const savedName = localStorage.getItem(VOICE_STORAGE);
+  if (savedName) {
+    const saved = voices.find(v => v.name === savedName);
+    if (saved) { voice = saved; return; }
+  }
+  voice = voices.filter(v => v.lang.startsWith("en")).sort((a, b) => rankVoice(b) - rankVoice(a))[0] || voices[0];
+}
+
 export function initSpeech(stateCb) {
   onSpeakStateChange = stateCb || (() => {});
-  const pickVoice = () => {
-    const voices = speechSynthesis.getVoices();
-    voice =
-      voices.find(v => /en[-_](IN)/i.test(v.lang)) ||
-      voices.find(v => /Samantha|Google UK English Female|Karen/i.test(v.name)) ||
-      voices.find(v => v.lang.startsWith("en")) || null;
-  };
   pickVoice();
   speechSynthesis.onvoiceschanged = pickVoice;
+}
+
+export function listVoices() {
+  return speechSynthesis.getVoices()
+    .filter(v => v.lang.startsWith("en"))
+    .sort((a, b) => rankVoice(b) - rankVoice(a))
+    .map(v => ({ name: v.name, lang: v.lang, selected: voice && v.name === voice.name }));
+}
+
+export function setVoice(name) {
+  const v = speechSynthesis.getVoices().find(x => x.name === name);
+  if (v) {
+    voice = v;
+    localStorage.setItem(VOICE_STORAGE, name);
+  }
 }
 
 // Unlock audio on iOS: speak a silent utterance from a tap handler.
@@ -29,8 +64,8 @@ export function speak(text) {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     if (voice) u.voice = voice;
-    u.rate = 0.95;
-    u.pitch = 1.05;
+    u.rate = RATE;
+    u.pitch = PITCH;
     u.onstart = () => onSpeakStateChange(true);
     const done = () => { onSpeakStateChange(false); resolve(); };
     u.onend = done;
