@@ -14,6 +14,23 @@ const NOTES = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25, 783
 const SPEED_TRIGGER = 0.022;   // normalized movement per frame that counts as a flick
 const NOTE_COOLDOWN_MS = 170;  // per finger
 
+export const NOTE_FREQS = NOTES;
+
+// One plucky triangle note into `out` (a GainNode or the ctx destination).
+export function synthNote(ctx, out, freq, vol = 0.3) {
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "triangle";
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.001, t);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.05, vol), t + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+  osc.connect(gain).connect(out);
+  osc.start(t);
+  osc.stop(t + 0.55);
+}
+
 export class AirMusic {
   constructor({ video, overlay }) {
     this.video = video;
@@ -21,6 +38,7 @@ export class AirMusic {
     this.landmarker = null;
     this.running = false;
     this.audio = null;
+    this.onNote = null;  // (idx, vol) — app hook for remote synthesis
     this.fingers = {};   // id -> {x, y, lastNoteAt, trail: []}
     this.ripples = [];   // {x, y, color, t0}
   }
@@ -42,10 +60,7 @@ export class AirMusic {
     this.video.srcObject = stream;
     await this.video.play();
     this.audio = this.audio || new (window.AudioContext || window.webkitAudioContext)();
-    if (!this.dest) {
-      // Second output: an audio track that can ride the WebRTC stream to the
-      // big screen (phone WebAudio is unreliable while the mic is active).
-      this.dest = this.audio.createMediaStreamDestination();
+    if (!this.localGain) {
       this.localGain = this.audio.createGain();
       this.localGain.connect(this.audio.destination);
     }
@@ -54,11 +69,6 @@ export class AirMusic {
     this.ripples = [];
     this.running = true;
     this.loop();
-  }
-
-  // Audio track for streaming the notes to the stage device.
-  getAudioTrack() {
-    return this.dest ? this.dest.stream.getAudioTracks()[0] : null;
   }
 
   // Mute the phone's own speaker while the laptop plays the notes.
@@ -78,20 +88,11 @@ export class AirMusic {
     if (this.audio.state === "suspended") this.audio.resume();
     // higher finger (smaller y) → higher note
     const idx = Math.min(NOTES.length - 1, Math.max(0, Math.floor((1 - y) * NOTES.length)));
-    const t = this.audio.currentTime;
-    const osc = this.audio.createOscillator();
-    const gain = this.audio.createGain();
-    osc.type = "triangle";
-    osc.frequency.value = NOTES[idx];
     const vol = Math.min(0.4, 0.15 + speed * 5);
-    gain.gain.setValueAtTime(0.001, t);
-    gain.gain.exponentialRampToValueAtTime(vol, t + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-    osc.connect(gain);
-    gain.connect(this.localGain);
-    gain.connect(this.dest);
-    osc.start(t);
-    osc.stop(t + 0.55);
+    // Tell the app about the note — in two-screen mode the LAPTOP synthesizes
+    // it (iOS refuses to render WebAudio while the mic session is active).
+    if (this.onNote) this.onNote(idx, vol);
+    synthNote(this.audio, this.localGain, NOTES[idx], vol);
   }
 
   loop() {

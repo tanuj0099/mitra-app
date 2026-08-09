@@ -5,7 +5,7 @@ import { RobotFace } from "./face.js";
 import { initSpeech, unlockAudio, speak, stopSpeaking, listenOnce, hasRecognition, listVoices, setVoice, setSpeakProxy } from "./speech.js";
 import { chatReply, getStory, getJoke, getRiddle, getApiKey, setApiKey, testApiKey, hasApiKey } from "./claude.js";
 import { Coach } from "./coach.js";
-import { AirMusic } from "./piano.js";
+import { AirMusic, NOTE_FREQS, synthNote } from "./piano.js";
 import { VoiceLoop } from "./voice.js";
 import { initFaceSync, initStageSync } from "./sync.js";
 import { PersonTracker } from "./tracker.js";
@@ -15,7 +15,7 @@ const $ = (id) => document.getElementById(id);
 
 // Roles: default = face/standalone (phone). ?stage=1 = big screen (laptop)
 // that runs the camera modes on command from the face device.
-const APP_V = 11; // bump on every deploy — both devices must match to pair
+const APP_V = 12; // bump on every deploy — both devices must match to pair
 
 const params = new URLSearchParams(location.search);
 const IS_STAGE = params.has("stage");
@@ -71,6 +71,10 @@ function show(name) {
   // keep sessions alive when they've migrated to the big screen (remoteMode)
   if (currentScreen === "coach" && name !== "coach" && remoteMode !== "coach") coach.stop();
   if (currentScreen === "piano" && name !== "piano" && remoteMode !== "piano") music.stop();
+  if (currentScreen === "piano" && name !== "piano" && micPausedForMusic) {
+    micPausedForMusic = false;
+    setMic(true); // restore the mic paused for local Air Music
+  }
   screens.forEach(s => $(`screen-${s}`).classList.toggle("active", s === name));
   currentScreen = name;
   Object.values(faces).forEach(f => f.stop());
@@ -104,6 +108,7 @@ const voiceLoop = new VoiceLoop(handleUtterance, (listening) => {
 
 // Mic is a toggle: tap on = keeps listening until tapped off.
 let micOn = false;
+let micPausedForMusic = false;
 function setMic(on) {
   micOn = on && hasRecognition;
   $("mic-toggle").classList.toggle("mic-on", micOn);
@@ -245,6 +250,7 @@ function stageShowIdle() {
 }
 
 let helloTimer = null;
+let stageAudio = null; // laptop-side synth for Air Music notes
 
 function startSync() {
   if (IS_STAGE) {
@@ -268,6 +274,9 @@ function startSync() {
           $("stage-reps").textContent = d.reps || "0";
           $("stage-bar-fill").style.width = d.bar || "0%";
           $("stage-feedback").textContent = d.feedback || "";
+        } else if (d.ev === "note") {
+          if (stageAudio && stageAudio.state === "suspended") stageAudio.resume();
+          if (stageAudio) synthNote(stageAudio, stageAudio.destination, NOTE_FREQS[d.idx] || 440, d.vol);
         } else if (d.ev === "track" && robot && robot.connected) {
           robot.send(d.state === "TRACKING" ? `X:${d.x.toFixed(2)}` : "LOST");
         }
@@ -343,6 +352,8 @@ else {
     ROOM = code;
     localStorage.setItem("mitra_stage_room", code);
     $("stage-code-modal").classList.add("hidden");
+    // The click is our user gesture — create the audio engine for notes now.
+    stageAudio = new (window.AudioContext || window.webkitAudioContext)();
     startSync();
     show("stage");
   };
@@ -422,7 +433,8 @@ function resumeRemoteStream() {
     sync.callStage($("coach-overlay").captureStream(24));
     startHudRelay();
   } else {
-    sync.callStage(pianoStream());
+    music.setLocalMuted(true);
+    sync.callStage($("piano-overlay").captureStream(24));
   }
 }
 
@@ -489,23 +501,13 @@ async function beginPiano() {
       return;
     }
     sync.send({ ev: "mode", mode: "piano" });
-    sync.callStage(pianoStream());
+    music.setLocalMuted(true); // the laptop synthesizes the notes
+    sync.callStage($("piano-overlay").captureStream(24));
     return;
   }
   await startPiano();
 }
 
-// Video of the hand tracking + the notes as an audio track; the laptop plays
-// the sound (phone WebAudio is unreliable while the mic session is active).
-function pianoStream() {
-  const stream = $("piano-overlay").captureStream(24);
-  const audioTrack = music.getAudioTrack();
-  if (audioTrack) {
-    stream.addTrack(audioTrack);
-    music.setLocalMuted(true);
-  }
-  return stream;
-}
 
 // ---------- Chat ----------
 async function startChat() {
@@ -582,8 +584,19 @@ $("btn-end-session").addEventListener("click", async () => {
 // ---------- Air Music ----------
 const music = new AirMusic({ video: $("piano-video"), overlay: $("piano-overlay") });
 
+// In two-screen mode the phone only DETECTS notes; the laptop synthesizes
+// them with its own (unrestricted) audio engine. iOS refuses to render
+// WebAudio while the mic session is active, so phone-side audio can't be
+// trusted when the big screen is running the show.
+music.onNote = (idx, vol) => {
+  if (remoteMode === "piano" && sync) sync.send({ ev: "note", idx, vol });
+};
+
 async function startPiano() {
   show("piano");
+  // iOS silences WebAudio while speech recognition runs — pause the mic
+  // for local play; it comes back when leaving the music screen.
+  if (micOn) { micPausedForMusic = true; setMic(false); }
   try {
     await speak("Wave your fingers in the air — higher hand, higher note!");
     await music.start();
