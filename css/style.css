@@ -62,17 +62,32 @@ html, body {
   box-shadow: 0 0 30px rgba(55, 224, 255, 0.5);
 }
 
-/* Captions (what the robot says) */
+/* Speech bubble (what the robot says) — sits beside the face */
 .caption {
   position: absolute;
-  bottom: 20%;
-  left: 8%;
-  right: 8%;
-  text-align: center;
-  font-size: 1.35rem;
-  line-height: 1.45;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+  right: 2.5%;
+  top: 16%;
+  width: min(32%, 340px);
+  max-height: 62%;
+  overflow-y: auto;
+  text-align: left;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  background: rgba(13, 22, 42, 0.9);
+  border: 1.5px solid rgba(55, 224, 255, 0.4);
+  border-radius: 1.2rem;
+  padding: 0.9rem 1.1rem;
   pointer-events: none;
+}
+.caption:empty { display: none; }
+.caption::before {
+  content: "";
+  position: absolute;
+  left: -0.7rem;
+  top: 2rem;
+  border: 0.7rem solid transparent;
+  border-right-color: rgba(55, 224, 255, 0.4);
+  border-left: none;
 }
 .user-line {
   position: absolute;
@@ -174,16 +189,58 @@ html, body {
 }
 .hidden { display: none !important; }
 
-/* Coach */
-#coach-video {
+/* Coach + Piano camera views */
+#coach-video, #piano-video {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: cover;
   transform: scaleX(-1);
 }
-#coach-overlay {
+#coach-overlay, #piano-overlay {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
+}
+#piano-hint {
+  position: absolute;
+  top: 0.9rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(5, 12, 26, 0.65);
+  border-radius: 999px;
+  padding: 0.45rem 1.2rem;
+  font-size: 1rem;
+}
+
+/* Hands-free indicators */
+#voice-indicator {
+  position: fixed;
+  bottom: 0.9rem;
+  right: 0.9rem;
+  z-index: 40;
+  font-size: 1.1rem;
+  background: rgba(255, 107, 107, 0.25);
+  border: 1.5px solid var(--danger);
+  border-radius: 50%;
+  width: 2.6rem;
+  height: 2.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse 1.2s infinite;
+  pointer-events: none;
+}
+#voice-toast {
+  position: fixed;
+  bottom: 1.1rem;
+  left: 1rem;
+  z-index: 40;
+  max-width: 45%;
+  font-size: 0.9rem;
+  color: var(--accent);
+  background: rgba(5, 12, 26, 0.7);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  pointer-events: none;
 }
 #coach-hud {
   position: absolute;

@@ -1,9 +1,12 @@
-// Mitra companion robot — main app: screens, navigation, chat, entertainment, settings.
+// Mitra companion robot — main app: hands-free voice control, screens, chat,
+// exercise coach, air piano, entertainment, settings.
 
 import { RobotFace } from "./face.js";
 import { initSpeech, unlockAudio, speak, stopSpeaking, listenOnce, hasRecognition, listVoices, setVoice } from "./speech.js";
 import { chatReply, getStory, getJoke, getRiddle, getApiKey, setApiKey, testApiKey, hasApiKey } from "./claude.js";
 import { Coach } from "./coach.js";
+import { AirPiano } from "./piano.js";
+import { VoiceLoop } from "./voice.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -17,17 +20,24 @@ const faces = {
 let activeFace = faces.boot;
 faces.boot.start();
 
-initSpeech((speaking) => {
-  activeFace.setState(speaking ? "speaking" : "idle");
-});
-
 // ---------- Screen navigation ----------
-const screens = ["boot", "home", "chat", "coach", "entertain"];
+const screens = ["boot", "home", "chat", "coach", "entertain", "piano"];
 let currentScreen = "boot";
+
+const captions = { home: "home-caption", chat: "chat-caption", entertain: "ent-caption" };
+function activeCaption() {
+  const id = captions[currentScreen];
+  return id ? $(id) : null;
+}
+function setCaption(text) {
+  const el = activeCaption();
+  if (el) el.textContent = text;
+}
 
 function show(name) {
   stopSpeaking();
   if (currentScreen === "coach" && name !== "coach") coach.stop();
+  if (currentScreen === "piano" && name !== "piano") piano.stop();
   screens.forEach(s => $(`screen-${s}`).classList.toggle("active", s === name));
   currentScreen = name;
   Object.values(faces).forEach(f => f.stop());
@@ -39,8 +49,73 @@ function show(name) {
 }
 
 document.querySelectorAll("[data-back]").forEach(btn =>
-  btn.addEventListener("click", () => show("home"))
+  btn.addEventListener("click", () => goHome())
 );
+
+async function goHome(sayLine) {
+  show("home");
+  if (sayLine) {
+    setCaption(sayLine);
+    await speak(sayLine);
+  }
+}
+
+// ---------- Hands-free voice control ----------
+
+const voiceLoop = new VoiceLoop(handleUtterance, (listening) => {
+  $("voice-indicator").classList.toggle("hidden", !listening);
+  if (listening && faces[currentScreen]) activeFace.setState("listening");
+});
+
+initSpeech((speaking) => {
+  voiceLoop.setSpeaking(speaking);
+  if (faces[currentScreen]) activeFace.setState(speaking ? "speaking" : "idle");
+});
+
+function showHeard(text) {
+  const toast = $("voice-toast");
+  toast.textContent = `🗣 "${text}"`;
+  toast.classList.remove("hidden");
+  clearTimeout(showHeard._t);
+  showHeard._t = setTimeout(() => toast.classList.add("hidden"), 4000);
+}
+
+async function handleUtterance(raw) {
+  const t = raw.toLowerCase();
+  const has = (re) => re.test(t);
+  showHeard(raw);
+
+  // On the coach screen, only exercise commands — ignore chatter mid-workout
+  if (currentScreen === "coach") {
+    if (has(/switch|next|change|different exercise/)) { coach.switchExercise(); return; }
+    if (has(/\b(end|stop|done|finish|finished|enough|home|back)\b/)) {
+      await coach.endSession();
+      await goHome("That was great! What next — more exercise, a story, some music, or just talk to me?");
+      return;
+    }
+    if (has(/how am i|how did i|feedback|coach/)) { coach.askCoach(); return; }
+    return;
+  }
+
+  if (currentScreen === "piano") {
+    if (has(/\b(stop|back|home|enough|exit|done|finish)\b/)) {
+      await goHome("What beautiful music! What shall we do next?");
+    }
+    return;
+  }
+
+  // Global intents
+  if (has(/piano|keyboard|play.*fingers|fingers.*play/)) { await startPiano(); return; }
+  if (has(/exercis|workout|work out|physio|stretch|fitness|training/)) { show("coach"); await startCoach(); return; }
+  if (has(/stor(y|ies)|kahani/)) { show("entertain"); await doEnt("story"); return; }
+  if (has(/joke|laugh|funny/)) { show("entertain"); await doEnt("joke"); return; }
+  if (has(/riddle|puzzle/)) { show("entertain"); await doEnt("riddle"); return; }
+  if (has(/tune|music|song|sing/)) { show("entertain"); await doEnt("tune"); return; }
+  if (has(/go home|home screen|main menu|go back/)) { await goHome("I am here, my friend!"); return; }
+
+  // Anything else is conversation
+  await handleUserText(raw);
+}
 
 // ---------- Boot ----------
 $("btn-wake").addEventListener("click", async () => {
@@ -50,20 +125,23 @@ $("btn-wake").addEventListener("click", async () => {
   }
   show("home");
   faces.home.setState("happy");
-  const greeting = "Hello my friend! I am Mitra, your companion. We can talk, exercise together, or have some fun. What would you like?";
-  $("home-caption").textContent = greeting;
+  const greeting = hasRecognition
+    ? "Hello my friend! I am Mitra. Just talk to me — say, let us exercise, or, tell me a story, or, play the piano. I am always listening!"
+    : "Hello my friend! I am Mitra, your companion. Tap a button below and let us spend some time together!";
+  setCaption(greeting);
   await speak(greeting);
-  setTimeout(() => { $("home-caption").textContent = ""; }, 2000);
+  voiceLoop.start();
+  setTimeout(() => { if (currentScreen === "home") setCaption(""); }, 4000);
 });
 
-// ---------- Home nav ----------
+// ---------- Home nav (touch remains as backup) ----------
 document.querySelectorAll(".mode-btn").forEach(btn =>
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", async () => {
     const mode = btn.dataset.mode;
     show(mode);
     if (mode === "chat") startChat();
     if (mode === "coach") startCoach();
-    if (mode === "entertain") speak("Fun time! Pick a story, a joke, a riddle, or a tune!");
+    if (mode === "entertain") speak("Fun time! Say story, joke, riddle, music, or piano!");
   })
 );
 
@@ -71,20 +149,16 @@ document.querySelectorAll(".mode-btn").forEach(btn =>
 async function startChat() {
   $("chat-caption").textContent = "";
   $("chat-user-line").textContent = "";
-  await speak("I am listening, my friend. Tap the microphone and talk to me!");
-  if (!hasRecognition) {
-    $("type-bar").classList.remove("hidden");
-    $("chat-caption").textContent = "Voice input not available — type to me instead!";
-  }
+  await speak(hasRecognition ? "I am listening, my friend. Talk to me!" : "Type to me, my friend!");
+  if (!hasRecognition) $("type-bar").classList.remove("hidden");
 }
 
 async function handleUserText(text) {
   if (!text || !text.trim()) return;
-  $("chat-user-line").textContent = `You: ${text}`;
-  $("chat-caption").textContent = "…";
-  activeFace.setState("idle");
+  if (currentScreen === "chat") $("chat-user-line").textContent = `You: ${text}`;
+  setCaption("…");
   const reply = await chatReply(text.trim());
-  $("chat-caption").textContent = reply;
+  setCaption(reply);
   await speak(reply);
 }
 
@@ -94,7 +168,7 @@ $("btn-mic").addEventListener("click", async () => {
   const text = await listenOnce({
     onStateChange: (listening) => {
       micBtn.classList.toggle("listening", listening);
-      activeFace.setState(listening ? "listening" : "idle");
+      if (faces[currentScreen]) activeFace.setState(listening ? "listening" : "idle");
     },
   });
   if (text) handleUserText(text);
@@ -148,39 +222,55 @@ $("btn-switch-exercise").addEventListener("click", () => coach.switchExercise())
 $("btn-ask-coach").addEventListener("click", () => coach.askCoach());
 $("btn-end-session").addEventListener("click", async () => {
   await coach.endSession();
-  show("home");
+  goHome();
 });
 
+// ---------- Air Piano ----------
+const piano = new AirPiano({ video: $("piano-video"), overlay: $("piano-overlay") });
+
+async function startPiano() {
+  show("piano");
+  try {
+    await speak("Piano time! Hold your hands up and dip your fingers into the keys. Say stop when you are done.");
+    await piano.start();
+  } catch (err) {
+    speak("I could not open my camera eye for the piano. Please check camera permission.");
+    goHome();
+  }
+}
+
 // ---------- Entertainment ----------
+async function doEnt(kind) {
+  stopSpeaking();
+  const cap = $("ent-caption");
+  if (kind === "piano") { await startPiano(); return; }
+  if (kind === "story") {
+    cap.textContent = "Let me think of a nice story…";
+    const story = await getStory();
+    cap.textContent = story;
+    await speak(story);
+    activeFace.setState("happy");
+  } else if (kind === "joke") {
+    const joke = await getJoke();
+    cap.textContent = joke;
+    await speak(joke);
+    activeFace.setState("happy");
+  } else if (kind === "riddle") {
+    const r = getRiddle();
+    cap.textContent = r.q;
+    await speak(`Here is a riddle! ${r.q}`);
+    await new Promise(res => setTimeout(res, 6000));
+    cap.textContent = `${r.q} — ${r.a}`;
+    await speak(`The answer is: ${r.a}`);
+    activeFace.setState("happy");
+  } else if (kind === "tune") {
+    cap.textContent = "🎶";
+    await playTune();
+  }
+}
+
 document.querySelectorAll(".ent-btn").forEach(btn =>
-  btn.addEventListener("click", async () => {
-    stopSpeaking();
-    const kind = btn.dataset.ent;
-    const cap = $("ent-caption");
-    if (kind === "story") {
-      cap.textContent = "Let me think of a nice story…";
-      const story = await getStory();
-      cap.textContent = story;
-      await speak(story);
-      activeFace.setState("happy");
-    } else if (kind === "joke") {
-      const joke = await getJoke();
-      cap.textContent = joke;
-      await speak(joke);
-      activeFace.setState("happy");
-    } else if (kind === "riddle") {
-      const r = getRiddle();
-      cap.textContent = r.q;
-      await speak(`Here is a riddle! ${r.q}`);
-      await new Promise(res => setTimeout(res, 6000));
-      cap.textContent = `${r.q} — ${r.a}`;
-      await speak(`The answer is: ${r.a}`);
-      activeFace.setState("happy");
-    } else if (kind === "tune") {
-      cap.textContent = "🎶";
-      await playTune();
-    }
-  })
+  btn.addEventListener("click", () => doEnt(btn.dataset.ent))
 );
 
 // Simple cheerful tune via WebAudio (no assets needed)

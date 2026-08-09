@@ -1,4 +1,5 @@
-// Animated Wall-E-style robot face rendered on a canvas.
+// Animated robot face rendered on a canvas — cute edition: big glossy eyes
+// with glints, pink cheeks, a gentle bob, and a happy little mouth.
 // States: idle (blinks), listening (wide eyes), speaking (mouth wobbles), happy (squint smile).
 
 export class RobotFace {
@@ -19,7 +20,7 @@ export class RobotFace {
       if (!this.running) return;
       this.resize();
       this.update(t);
-      this.draw();
+      this.draw(t);
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
@@ -40,7 +41,6 @@ export class RobotFace {
   }
 
   update(t) {
-    // Blinking
     if (t > this.nextBlinkAt) {
       this.blink = 1;
       this.nextBlinkAt = t + 2500 + Math.random() * 3000;
@@ -49,26 +49,32 @@ export class RobotFace {
     this.mouthPhase += 0.25;
   }
 
-  draw() {
+  draw(t) {
     const { ctx, canvas } = this;
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    const cx = w / 2, cy = h * 0.42;
-    const eyeW = w * 0.13, eyeGap = w * 0.11;
-    let eyeH = h * 0.28;
-    if (this.state === "listening") eyeH *= 1.15;
+    // gentle floating bob
+    const bob = Math.sin((t || 0) * 0.0016) * h * 0.012;
+    const cx = w / 2, cy = h * 0.42 + bob;
+    const eyeW = w * 0.14, eyeGap = w * 0.105;
+    let eyeH = h * 0.30;
+    if (this.state === "listening") eyeH *= 1.12;
     if (this.state === "happy") eyeH *= 0.55;
     const openness = 1 - this.blink * 0.92;
 
-    ctx.fillStyle = "#37e0ff";
-    ctx.shadowColor = "rgba(55,224,255,0.7)";
-    ctx.shadowBlur = w * 0.02;
     for (const side of [-1, 1]) {
       const ex = cx + side * (eyeGap + eyeW / 2);
       const eh = eyeH * openness;
-      this.roundRect(ex - eyeW / 2, cy - eh / 2, eyeW, eh, Math.min(eyeW, eh) * 0.45);
+
+      // eye
+      ctx.fillStyle = "#37e0ff";
+      ctx.shadowColor = "rgba(55,224,255,0.75)";
+      ctx.shadowBlur = w * 0.025;
+      this.roundRect(ex - eyeW / 2, cy - eh / 2, eyeW, eh, Math.min(eyeW, eh) * 0.5);
       ctx.fill();
+      ctx.shadowBlur = 0;
+
       if (this.state === "happy") {
         // carve a smile-squint from the bottom of each eye
         ctx.save();
@@ -77,14 +83,29 @@ export class RobotFace {
         ctx.ellipse(ex, cy + eh * 0.65, eyeW * 0.75, eh * 0.55, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
+      } else if (openness > 0.4) {
+        // glossy glints
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.beginPath();
+        ctx.ellipse(ex - eyeW * 0.18, cy - eh * 0.22, eyeW * 0.11, eh * 0.09, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.55)";
+        ctx.beginPath();
+        ctx.ellipse(ex + eyeW * 0.14, cy + eh * 0.12, eyeW * 0.055, eh * 0.045, 0, 0, Math.PI * 2);
+        ctx.fill();
       }
+
+      // pink cheek blush
+      ctx.fillStyle = "rgba(255, 143, 163, 0.35)";
+      ctx.beginPath();
+      ctx.ellipse(ex + side * eyeW * 0.25, cy + eyeH * 0.62, eyeW * 0.34, eyeH * 0.13, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
-    ctx.shadowBlur = 0;
 
     // Mouth
-    const my = h * 0.72;
+    const my = h * 0.72 + bob;
     ctx.strokeStyle = "#37e0ff";
-    ctx.lineWidth = Math.max(4, h * 0.012);
+    ctx.lineWidth = Math.max(4, h * 0.014);
     ctx.lineCap = "round";
     ctx.beginPath();
     if (this.state === "speaking") {
@@ -97,10 +118,10 @@ export class RobotFace {
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
     } else if (this.state === "happy") {
-      ctx.arc(cx, my - h * 0.04, w * 0.09, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.arc(cx, my - h * 0.045, w * 0.095, 0.12 * Math.PI, 0.88 * Math.PI);
     } else {
-      // gentle smile
-      ctx.arc(cx, my - h * 0.06, w * 0.08, 0.2 * Math.PI, 0.8 * Math.PI);
+      // small contented smile
+      ctx.arc(cx, my - h * 0.055, w * 0.075, 0.18 * Math.PI, 0.82 * Math.PI);
     }
     ctx.stroke();
   }
