@@ -15,7 +15,7 @@ const $ = (id) => document.getElementById(id);
 
 // Roles: default = face/standalone (phone). ?stage=1 = big screen (laptop)
 // that runs the camera modes on command from the face device.
-const APP_V = 6; // bump on every deploy — both devices must match to pair
+const APP_V = 7; // bump on every deploy — both devices must match to pair
 
 const params = new URLSearchParams(location.search);
 const IS_STAGE = params.has("stage");
@@ -50,8 +50,9 @@ function setCaption(text) {
 
 function show(name) {
   stopSpeaking();
-  if (currentScreen === "coach" && name !== "coach") coach.stop();
-  if (currentScreen === "piano" && name !== "piano") music.stop();
+  // keep sessions alive when they've migrated to the big screen (remoteMode)
+  if (currentScreen === "coach" && name !== "coach" && remoteMode !== "coach") coach.stop();
+  if (currentScreen === "piano" && name !== "piano" && remoteMode !== "piano") music.stop();
   screens.forEach(s => $(`screen-${s}`).classList.toggle("active", s === name));
   currentScreen = name;
   Object.values(faces).forEach(f => f.stop());
@@ -223,15 +224,18 @@ function stageShowIdle() {
   $("stage-idle").classList.remove("hidden");
 }
 
+let helloTimer = null;
+
 function startSync() {
   if (IS_STAGE) {
     sync = initStageSync(ROOM, {
       onData: (d) => {
         if (!d || !d.ev) return;
         if (d.ev === "hello") {
-          if (d.v !== APP_V) {
-            $("stage-status").textContent = "⚠️ Version mismatch — hard refresh BOTH devices (Cmd+Shift+R / close and reopen the tab)";
-          }
+          clearTimeout(helloTimer);
+          $("stage-status").textContent = d.v === APP_V
+            ? "✅ Connected to Mitra — talk to the robot!"
+            : "⚠️ Version mismatch — hard refresh BOTH devices (Cmd+Shift+R / close and reopen the tab)";
         } else if (d.ev === "mode") {
           if (d.mode === "home") stageShowIdle();
           else {
@@ -256,9 +260,20 @@ function startSync() {
       },
       onCallEnd: stageShowIdle,
       onStatus: (s) => {
+        if (s === "connected") {
+          // Don't trust the link until the phone's version handshake arrives —
+          // we may have reached a stale "ghost" session still holding the id.
+          $("stage-status").textContent = "🔗 Linked — verifying it's really your Mitra…";
+          clearTimeout(helloTimer);
+          helloTimer = setTimeout(() => {
+            $("stage-status").textContent =
+              "⚠️ Reached an old Mitra session. Close ALL Mitra tabs on the phone, reopen ONE, then refresh this page.";
+          }, 3000);
+          return;
+        }
+        clearTimeout(helloTimer);
         $("stage-status").textContent =
-          s === "connected" ? "✅ Connected to Mitra — talk to the robot!"
-          : s === "connecting" ? "Connecting to Mitra… (open the app on the phone too)"
+          s === "connecting" ? "Connecting to Mitra… (open the app on the phone too)"
           : s === "disconnected" ? "Lost Mitra — reconnecting…"
           : `Waiting for Mitra… (${s})`;
       },
@@ -268,11 +283,18 @@ function startSync() {
       onStatus: (s) => {
         const was = stageConnected;
         stageConnected = s === "connected";
+        $("stage-dot").classList.toggle("hidden", !stageConnected);
         if (stageConnected && !was) {
           sync.send({ ev: "hello", v: APP_V });
-          if (currentScreen !== "boot") speak("Big screen connected!");
-          // If a session is already running, (re)establish the stream
-          if (remoteMode) resumeRemoteStream();
+          if (remoteMode) {
+            resumeRemoteStream();      // re-establish after a reconnect
+          } else if (currentScreen === "coach" || currentScreen === "piano") {
+            migrateToStage();          // move a running local session over
+          } else if (currentScreen !== "boot") {
+            speak("Big screen connected!");
+          }
+        } else if (!stageConnected && was && remoteMode) {
+          migrateBackToPhone();        // laptop dropped mid-session
         }
       },
     });
@@ -327,6 +349,26 @@ function startHudRelay() {
       feedback: $("coach-feedback").textContent,
     });
   }, 400);
+}
+
+// A local camera session was running when the big screen connected — hand the
+// picture over: phone goes back to the face, laptop shows the session.
+function migrateToStage() {
+  remoteMode = currentScreen === "coach" ? "coach" : "piano";
+  show("home");                  // remoteMode set, so show() keeps the session alive
+  activeFace.setState("happy");
+  resumeRemoteStream();
+  speak("Big screen connected! Keep going — watch it there, I will stay with you here.");
+}
+
+// The big screen disappeared mid-session — bring the picture back to the phone.
+function migrateBackToPhone() {
+  const mode = remoteMode;
+  clearInterval(hudTimer);
+  hudTimer = null;
+  remoteMode = null;
+  show(mode);
+  speak("I lost the big screen, but no problem — let us continue right here!");
 }
 
 function resumeRemoteStream() {

@@ -221,6 +221,17 @@ html, body {
 #stage-status { font-size: 1.4rem; }
 .stage-sub { opacity: 0.6; }
 
+/* Big-screen link indicator (phone) */
+#stage-dot {
+  position: fixed;
+  bottom: 1.1rem;
+  left: 1rem;
+  z-index: 40;
+  font-size: 1rem;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 /* Global mic toggle */
 #mic-toggle {
   position: fixed;
