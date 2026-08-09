@@ -42,6 +42,13 @@ export class AirMusic {
     this.video.srcObject = stream;
     await this.video.play();
     this.audio = this.audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (!this.dest) {
+      // Second output: an audio track that can ride the WebRTC stream to the
+      // big screen (phone WebAudio is unreliable while the mic is active).
+      this.dest = this.audio.createMediaStreamDestination();
+      this.localGain = this.audio.createGain();
+      this.localGain.connect(this.audio.destination);
+    }
     if (this.audio.state === "suspended") this.audio.resume();
     this.fingers = {};
     this.ripples = [];
@@ -49,14 +56,26 @@ export class AirMusic {
     this.loop();
   }
 
+  // Audio track for streaming the notes to the stage device.
+  getAudioTrack() {
+    return this.dest ? this.dest.stream.getAudioTracks()[0] : null;
+  }
+
+  // Mute the phone's own speaker while the laptop plays the notes.
+  setLocalMuted(m) {
+    if (this.localGain) this.localGain.gain.value = m ? 0 : 1;
+  }
+
   stop() {
     this.running = false;
+    this.setLocalMuted(false);
     const stream = this.video.srcObject;
     if (stream) stream.getTracks().forEach(t => t.stop());
     this.video.srcObject = null;
   }
 
   playNote(y, speed) {
+    if (this.audio.state === "suspended") this.audio.resume();
     // higher finger (smaller y) → higher note
     const idx = Math.min(NOTES.length - 1, Math.max(0, Math.floor((1 - y) * NOTES.length)));
     const t = this.audio.currentTime;
@@ -68,7 +87,9 @@ export class AirMusic {
     gain.gain.setValueAtTime(0.001, t);
     gain.gain.exponentialRampToValueAtTime(vol, t + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-    osc.connect(gain).connect(this.audio.destination);
+    osc.connect(gain);
+    gain.connect(this.localGain);
+    gain.connect(this.dest);
     osc.start(t);
     osc.stop(t + 0.55);
   }

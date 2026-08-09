@@ -15,7 +15,7 @@ const $ = (id) => document.getElementById(id);
 
 // Roles: default = face/standalone (phone). ?stage=1 = big screen (laptop)
 // that runs the camera modes on command from the face device.
-const APP_V = 10; // bump on every deploy — both devices must match to pair
+const APP_V = 11; // bump on every deploy — both devices must match to pair
 
 const params = new URLSearchParams(location.search);
 const IS_STAGE = params.has("stage");
@@ -276,7 +276,13 @@ function startSync() {
         $("stage-idle").classList.add("hidden");
         const v = $("stage-video");
         v.srcObject = s;
-        v.play().catch(() => {});
+        // Air Music sends its notes as an audio track — play them here.
+        v.muted = false;
+        v.volume = 1;
+        v.play().catch(() => {
+          v.muted = true;   // fall back to silent video if autoplay blocks audio
+          v.play().catch(() => {});
+        });
       },
       onCallEnd: stageShowIdle,
       onStatus: (s) => {
@@ -405,15 +411,19 @@ function migrateBackToPhone() {
   clearInterval(hudTimer);
   hudTimer = null;
   remoteMode = null;
+  music.setLocalMuted(false); // notes come from the phone again
   show(mode);
   speak("Let us continue here!");
 }
 
 function resumeRemoteStream() {
-  const canvas = remoteMode === "coach" ? $("coach-overlay") : $("piano-overlay");
   sync.send({ ev: "mode", mode: remoteMode });
-  sync.callStage(canvas.captureStream(24));
-  if (remoteMode === "coach") startHudRelay();
+  if (remoteMode === "coach") {
+    sync.callStage($("coach-overlay").captureStream(24));
+    startHudRelay();
+  } else {
+    sync.callStage(pianoStream());
+  }
 }
 
 function stopRemote() {
@@ -479,10 +489,22 @@ async function beginPiano() {
       return;
     }
     sync.send({ ev: "mode", mode: "piano" });
-    sync.callStage($("piano-overlay").captureStream(24));
+    sync.callStage(pianoStream());
     return;
   }
   await startPiano();
+}
+
+// Video of the hand tracking + the notes as an audio track; the laptop plays
+// the sound (phone WebAudio is unreliable while the mic session is active).
+function pianoStream() {
+  const stream = $("piano-overlay").captureStream(24);
+  const audioTrack = music.getAudioTrack();
+  if (audioTrack) {
+    stream.addTrack(audioTrack);
+    music.setLocalMuted(true);
+  }
+  return stream;
 }
 
 // ---------- Chat ----------
