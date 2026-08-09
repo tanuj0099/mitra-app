@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Mitra — Your Companion</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- Rotate-your-device overlay (portrait only) -->
+  <div id="rotate-overlay">
+    <div class="rotate-inner">
+      <div class="rotate-icon">📱↻</div>
+      <p>Please rotate your device to landscape</p>
+    </div>
+  </div>
+
+  <!-- Boot screen: unlocks audio/TTS on iOS with a user gesture -->
+  <section id="screen-boot" class="screen active">
+    <canvas id="boot-face" class="face-canvas"></canvas>
+    <button id="btn-wake" class="big-cta">Tap to wake Mitra</button>
+  </section>
+
+  <!-- Home: full-screen face + mode buttons -->
+  <section id="screen-home" class="screen">
+    <canvas id="home-face" class="face-canvas"></canvas>
+    <div id="home-caption" class="caption"></div>
+    <nav id="home-nav">
+      <button class="mode-btn" data-mode="chat">💬<span>Talk to me</span></button>
+      <button class="mode-btn" data-mode="coach">🏋️<span>Exercise</span></button>
+      <button class="mode-btn" data-mode="entertain">🎵<span>Entertain me</span></button>
+    </nav>
+    <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
+  </section>
+
+  <!-- Chat: face + captions + mic -->
+  <section id="screen-chat" class="screen">
+    <canvas id="chat-face" class="face-canvas"></canvas>
+    <div id="chat-caption" class="caption"></div>
+    <div id="chat-user-line" class="user-line"></div>
+    <div class="chat-controls">
+      <button id="btn-mic" class="round-btn mic">🎤</button>
+      <button id="btn-type" class="round-btn small" title="Type instead">⌨️</button>
+    </div>
+    <div id="type-bar" class="type-bar hidden">
+      <input id="type-input" type="text" placeholder="Type your message…" autocomplete="off" />
+      <button id="type-send">➤</button>
+    </div>
+    <button class="icon-btn back" data-back>←</button>
+  </section>
+
+  <!-- Coach: camera + skeleton overlay + HUD -->
+  <section id="screen-coach" class="screen">
+    <video id="coach-video" playsinline muted></video>
+    <canvas id="coach-overlay"></canvas>
+    <div id="coach-hud">
+      <div id="coach-exercise-name">Seated Arm Raises</div>
+      <div id="coach-reps">0</div>
+      <div id="coach-feedback">Loading pose model…</div>
+    </div>
+    <div class="coach-controls">
+      <button id="btn-switch-exercise" class="pill-btn">Switch exercise</button>
+      <button id="btn-ask-coach" class="pill-btn accent">Ask coach 🧠</button>
+      <button id="btn-end-session" class="pill-btn danger">End session</button>
+    </div>
+    <button class="icon-btn back" data-back>←</button>
+  </section>
+
+  <!-- Entertain -->
+  <section id="screen-entertain" class="screen">
+    <canvas id="ent-face" class="face-canvas"></canvas>
+    <div id="ent-caption" class="caption"></div>
+    <nav id="ent-nav">
+      <button class="ent-btn" data-ent="story">📖<span>Story</span></button>
+      <button class="ent-btn" data-ent="joke">😄<span>Joke</span></button>
+      <button class="ent-btn" data-ent="riddle">🧩<span>Riddle</span></button>
+      <button class="ent-btn" data-ent="tune">🎶<span>Play a tune</span></button>
+    </nav>
+    <button class="icon-btn back" data-back>←</button>
+  </section>
+
+  <!-- Settings modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Settings</h2>
+      <label>Claude API key (optional — enables real AI)
+        <input id="api-key-input" type="password" placeholder="sk-ant-…" autocomplete="off" />
+      </label>
+      <div id="api-status" class="api-status">Offline mode — scripted responses</div>
+      <div class="modal-actions">
+        <button id="btn-test-key" class="pill-btn">Save &amp; test</button>
+        <button id="btn-clear-key" class="pill-btn danger">Clear key</button>
+        <button id="btn-close-settings" class="pill-btn">Close</button>
+      </div>
+      <p class="hint">Voice input needs Siri &amp; Dictation enabled on iPhone. Camera needs HTTPS.</p>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
