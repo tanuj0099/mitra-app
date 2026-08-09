@@ -13,6 +13,8 @@ const $ = (id) => document.getElementById(id);
 
 // Roles: default = face/standalone (phone). ?stage=1 = big screen (laptop)
 // that runs the camera modes on command from the face device.
+const APP_V = 4; // bump on every deploy — both devices must match to pair
+
 const params = new URLSearchParams(location.search);
 const IS_STAGE = params.has("stage");
 const ROOM = params.get("room") || "demo";
@@ -74,8 +76,23 @@ async function goHome(sayLine) {
 // ---------- Hands-free voice control ----------
 
 const voiceLoop = new VoiceLoop(handleUtterance, (listening) => {
-  $("voice-indicator").classList.toggle("hidden", !listening);
+  $("mic-toggle").classList.toggle("listening", listening);
   if (listening && faces[currentScreen]) activeFace.setState("listening");
+});
+
+// Mic is a toggle: tap on = keeps listening until tapped off.
+let micOn = false;
+function setMic(on) {
+  micOn = on && hasRecognition;
+  $("mic-toggle").classList.toggle("mic-on", micOn);
+  if (micOn) voiceLoop.start();
+  else voiceLoop.stop();
+}
+$("mic-toggle").addEventListener("click", () => {
+  if (!hasRecognition) { speak("Voice input is not available on this device, my friend. Use the buttons!"); return; }
+  setMic(!micOn);
+  if (micOn) speak("I am listening!");
+  else stopSpeaking();
 });
 
 initSpeech((speaking) => {
@@ -164,9 +181,16 @@ function startSync() {
     sync = initStageSync(ROOM, {
       onData: (d) => {
         if (!d || !d.ev) return;
-        if (d.ev === "mode") {
+        if (d.ev === "hello") {
+          if (d.v !== APP_V) {
+            $("stage-status").textContent = "⚠️ Version mismatch — hard refresh BOTH devices (Cmd+Shift+R / close and reopen the tab)";
+          }
+        } else if (d.ev === "mode") {
           if (d.mode === "home") stageShowIdle();
-          else $("stage-hud").classList.toggle("hidden", d.mode !== "coach");
+          else {
+            $("stage-hud").classList.toggle("hidden", d.mode !== "coach");
+            if (!$("stage-video").srcObject) $("stage-status").textContent = "🎥 Starting video from Mitra…";
+          }
         } else if (d.ev === "hud") {
           $("stage-ex-name").textContent = d.name || "";
           $("stage-status-pill").textContent = d.status || "";
@@ -195,7 +219,12 @@ function startSync() {
       onStatus: (s) => {
         const was = stageConnected;
         stageConnected = s === "connected";
-        if (stageConnected && !was && currentScreen !== "boot") speak("Big screen connected!");
+        if (stageConnected && !was) {
+          sync.send({ ev: "hello", v: APP_V });
+          if (currentScreen !== "boot") speak("Big screen connected!");
+          // If a session is already running, (re)establish the stream
+          if (remoteMode) resumeRemoteStream();
+        }
       },
     });
   }
@@ -214,12 +243,12 @@ $("btn-wake").addEventListener("click", async () => {
   }
   show("home");
   faces.home.setState("happy");
+  $("mic-toggle").classList.remove("hidden");
   const greeting = hasRecognition
-    ? "Hello my friend! I am Mitra. Just talk to me — say, let us exercise, or, tell me a story, or, play the piano. I am always listening!"
+    ? "Hello my friend! I am Mitra. Tap the microphone button at the bottom, and then just talk to me — say, let us exercise, or, tell me a story, or, play some music!"
     : "Hello my friend! I am Mitra, your companion. Tap a button below and let us spend some time together!";
   setCaption(greeting);
   await speak(greeting);
-  voiceLoop.start();
   setTimeout(() => { if (currentScreen === "home") setCaption(""); }, 4000);
 });
 
@@ -248,6 +277,13 @@ function startHudRelay() {
       feedback: $("coach-feedback").textContent,
     });
   }, 400);
+}
+
+function resumeRemoteStream() {
+  const canvas = remoteMode === "coach" ? $("coach-overlay") : $("piano-overlay");
+  sync.send({ ev: "mode", mode: remoteMode });
+  sync.callStage(canvas.captureStream(24));
+  if (remoteMode === "coach") startHudRelay();
 }
 
 function stopRemote() {

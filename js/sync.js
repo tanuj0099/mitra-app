@@ -4,12 +4,27 @@
 // pure display — it receives the phone's composited camera+overlay canvas
 // as a video stream, plus small JSON HUD updates.
 
+// Optional ?peer=host:port URL param points at a self-hosted PeerJS server
+// (used for testing; also a venue fallback if the public broker is blocked).
+function peerOpts() {
+  const p = new URLSearchParams(location.search);
+  const spec = p.get("peer");
+  if (!spec) return {};
+  const [host, port] = spec.split(":");
+  return {
+    host,
+    port: Number(port) || 443,
+    path: p.get("peerpath") || "/",
+    secure: location.protocol === "https:" && !host.startsWith("localhost"),
+  };
+}
+
 export function initFaceSync(room, { onStatus }) {
   if (typeof Peer === "undefined") return dummy();
   let peer = null, conn = null, media = null;
 
   const make = () => {
-    peer = new Peer(`mitra-face-${room}`);
+    peer = new Peer(`mitra-face-${room}`, peerOpts());
     peer.on("open", () => onStatus("waiting"));
     peer.on("connection", (c) => {
       conn = c;
@@ -45,7 +60,7 @@ export function initFaceSync(room, { onStatus }) {
 
 export function initStageSync(room, { onData, onStream, onCallEnd, onStatus }) {
   if (typeof Peer === "undefined") return dummy();
-  const peer = new Peer();
+  const peer = new Peer(peerOpts());
   let conn = null;
   let retryTimer = null;
   const retry = () => {

@@ -263,23 +263,34 @@ html, body {
 #stage-status { font-size: 1.4rem; }
 .stage-sub { opacity: 0.6; }
 
-/* Hands-free indicators */
-#voice-indicator {
+/* Global mic toggle */
+#mic-toggle {
   position: fixed;
   bottom: 0.9rem;
   right: 0.9rem;
-  z-index: 40;
-  font-size: 1.1rem;
-  background: rgba(255, 107, 107, 0.25);
-  border: 1.5px solid var(--danger);
+  z-index: 45;
+  font-size: 1.7rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.35);
   border-radius: 50%;
-  width: 2.6rem;
-  height: 2.6rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  opacity: 0.75;
+  filter: grayscale(1);
+  color: var(--text);
+}
+#mic-toggle.mic-on {
+  opacity: 1;
+  filter: none;
+  background: rgba(55, 224, 255, 0.3);
+  border-color: var(--eye);
+  box-shadow: 0 0 20px rgba(55, 224, 255, 0.5);
+}
+#mic-toggle.mic-on.listening {
+  background: rgba(255, 107, 107, 0.35);
+  border-color: var(--danger);
+  box-shadow: 0 0 20px rgba(255, 107, 107, 0.55);
   animation: pulse 1.2s infinite;
-  pointer-events: none;
 }
 #voice-toast {
   position: fixed;
