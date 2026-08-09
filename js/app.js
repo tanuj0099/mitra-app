@@ -121,7 +121,13 @@ $("type-input").addEventListener("keydown", (e) => {
 const coach = new Coach({
   video: $("coach-video"),
   overlay: $("coach-overlay"),
-  hud: { name: $("coach-exercise-name"), reps: $("coach-reps"), feedback: $("coach-feedback") },
+  hud: {
+    name: $("coach-exercise-name"),
+    reps: $("coach-reps"),
+    feedback: $("coach-feedback"),
+    status: $("coach-status"),
+    barFill: $("coach-bar-fill"),
+  },
 });
 
 async function startCoach() {

@@ -197,6 +197,33 @@ html, body {
   min-width: 40%;
 }
 #coach-exercise-name { font-size: 1rem; opacity: 0.9; }
+.coach-status {
+  display: inline-block;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  margin: 0.2rem 0;
+  background: rgba(255, 180, 84, 0.2);
+  color: var(--accent);
+}
+.coach-status.ok { background: rgba(125, 255, 160, 0.18); color: #7dffa0; }
+.coach-status.calib { background: rgba(55, 224, 255, 0.18); color: var(--eye); }
+#coach-bar {
+  width: 100%;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.15);
+  overflow: hidden;
+  margin: 0.25rem 0 0.35rem;
+}
+#coach-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--eye);
+  transition: width 80ms linear;
+}
+#coach-bar-fill.full { background: #7dffa0; }
 #coach-reps { font-size: 3rem; font-weight: 800; color: var(--eye); line-height: 1.1; }
 #coach-feedback { font-size: 1rem; color: var(--accent); min-height: 1.3em; }
 .coach-controls {
