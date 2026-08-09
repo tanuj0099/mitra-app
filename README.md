@@ -28,16 +28,19 @@ the robot body, runs this web app.
 
 ## Two-screen mode (phone = face, laptop = big screen)
 
-The robot's phone always shows the face; a laptop can act as the "projector"
-that runs the camera modes:
+The robot's phone always shows the face; a laptop acts as the "projector".
+The phone does all the work (camera, pose tracking, speech) and streams its
+composited camera + skeleton view to the laptop over WebRTC — the laptop is
+a pure display and never uses its own camera:
 
-1. On the phone, open the app URL normally and tap wake.
+1. On the phone, open the app URL and tap wake.
 2. On the laptop, open the **same URL with `?stage=1`** and click
-   "Start camera screen". It connects to the phone automatically (WebRTC via
-   PeerJS) and uses the **laptop's own webcam**.
-3. Say "let's exercise" or "play some music" to the phone — the laptop runs
-   the camera view while the phone keeps showing the face, speaking counts
-   and feedback. If no laptop is connected, the phone uses its own camera.
+   "Start display screen". Pairing is automatic (PeerJS); order doesn't
+   matter — both retry until they find each other.
+3. Say "let's exercise" or "play some music" to the phone — the phone keeps
+   showing the face and speaking, while the live camera + skeleton + rep
+   counter appear on the laptop. If no laptop is paired, the phone shows
+   the camera view itself.
 
 Multiple teams on one network? Add the same `?room=yourname` to both URLs.
 

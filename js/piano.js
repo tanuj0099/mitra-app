@@ -2,6 +2,8 @@
 // A quick finger movement triggers a note; the finger's height picks the
 // pitch on a pentatonic scale (so everything played sounds pleasant).
 
+import { drawVideoCoverMirrored } from "./coach.js";
+
 const MP_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 const HAND_MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
 
@@ -75,11 +77,13 @@ export class AirMusic {
     if (!this.running) return;
     const ctx = this.overlay.getContext("2d");
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = this.overlay.clientWidth * dpr, h = this.overlay.clientHeight * dpr;
+    // fall back to 720p when the canvas is hidden (streaming to a big screen)
+    const w = (this.overlay.clientWidth || 1280) * dpr, h = (this.overlay.clientHeight || 720) * dpr;
     if (this.overlay.width !== w || this.overlay.height !== h) {
       this.overlay.width = w; this.overlay.height = h;
     }
     ctx.clearRect(0, 0, w, h);
+    if (this.video.readyState >= 2) drawVideoCoverMirrored(ctx, this.video, w, h);
     const now = performance.now();
 
     if (this.video.readyState >= 2) {

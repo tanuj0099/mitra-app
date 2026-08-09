@@ -79,6 +79,21 @@ const EXERCISES = [
   },
 ];
 
+// Draw the camera frame mirrored and cover-cropped into the canvas, so the
+// canvas is a complete self-contained view (streamable to a second screen).
+export function drawVideoCoverMirrored(ctx, video, w, h) {
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw || !vh) return;
+  const scale = Math.max(w / vw, h / vh);
+  const sw = w / scale, sh = h / scale;
+  const sx = (vw - sw) / 2, sy = (vh - sh) / 2;
+  ctx.save();
+  ctx.translate(w, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
+  ctx.restore();
+}
+
 const STABLE_FRAMES_NEEDED = 45;   // ~1.5-2s fully visible before starting
 const LOST_FRAMES_LIMIT = 45;      // lose the user this long → back to positioning
 const CALIB_REPS_NEEDED = 2;
@@ -179,7 +194,8 @@ export class Coach {
     if (!this.running) return;
     const ctx = this.overlay.getContext("2d");
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const w = this.overlay.clientWidth * dpr, h = this.overlay.clientHeight * dpr;
+    // fall back to 720p when the canvas is hidden (streaming to a big screen)
+    const w = (this.overlay.clientWidth || 1280) * dpr, h = (this.overlay.clientHeight || 720) * dpr;
     if (this.overlay.width !== w || this.overlay.height !== h) {
       this.overlay.width = w; this.overlay.height = h;
     }
@@ -187,6 +203,7 @@ export class Coach {
     if (this.video.readyState >= 2) {
       const result = this.landmarker.detectForVideo(this.video, performance.now());
       ctx.clearRect(0, 0, w, h);
+      drawVideoCoverMirrored(ctx, this.video, w, h);
       const lm = result.landmarks && result.landmarks[0];
       const visible = lm ? this.checkVisibility(lm) : false;
       if (lm) this.drawSkeleton(ctx, lm, w, h, visible);

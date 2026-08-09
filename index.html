@@ -93,9 +93,18 @@
     <button class="icon-btn back" data-back>←</button>
   </section>
 
-  <!-- Stage idle screen (laptop / big screen mode, ?stage=1) -->
+  <!-- Stage display (laptop / big screen mode, ?stage=1): shows the phone's
+       camera + overlay stream. Pure display — no camera or mic of its own. -->
   <section id="screen-stage" class="screen">
-    <div class="stage-idle">
+    <video id="stage-video" playsinline autoplay muted></video>
+    <div id="stage-hud" class="hidden">
+      <div id="stage-ex-name"></div>
+      <div id="stage-status-pill" class="coach-status wait"></div>
+      <div id="stage-reps">0</div>
+      <div id="stage-bar"><div id="stage-bar-fill"></div></div>
+      <div id="stage-feedback"></div>
+    </div>
+    <div class="stage-idle" id="stage-idle">
       <div class="stage-emoji">🤖</div>
       <p id="stage-status">Connecting to Mitra…</p>
       <p class="stage-sub">Exercises and music will appear on this screen</p>

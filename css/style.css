@@ -211,6 +211,43 @@ html, body {
   font-size: 1rem;
 }
 
+/* Stage (big screen) display */
+#stage-video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+#stage-hud {
+  position: absolute;
+  top: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  background: rgba(5, 12, 26, 0.7);
+  border-radius: 1.2rem;
+  padding: 0.7rem 2rem;
+  min-width: 40%;
+}
+#stage-ex-name { font-size: 1.4rem; }
+#stage-reps { font-size: 4.5rem; font-weight: 800; color: var(--eye); line-height: 1.1; }
+#stage-bar {
+  width: 100%;
+  height: 0.7rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.15);
+  overflow: hidden;
+  margin: 0.3rem 0 0.4rem;
+}
+#stage-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--eye);
+  transition: width 120ms linear;
+}
+#stage-feedback { font-size: 1.2rem; color: var(--accent); min-height: 1.4em; }
+
 /* Stage (big screen) idle */
 .stage-idle {
   position: absolute;

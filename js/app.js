@@ -96,22 +96,23 @@ async function handleUtterance(raw) {
   const has = (re) => re.test(t);
   showHeard(raw);
 
-  // While the stage (laptop) runs a mode, the phone relays voice commands
+  // While a session streams to the big screen, the phone shows the face but
+  // the coach/music still run locally — control them directly.
   if (remoteMode === "coach") {
-    if (has(/switch|next|change|different exercise/)) { sync.send({ cmd: "switch" }); return; }
+    if (has(/switch|next|change|different exercise/)) { coach.switchExercise(); return; }
     if (has(/\b(end|stop|done|finish|finished|enough|home|back)\b/)) {
-      sync.send({ cmd: "end" });
-      remoteMode = null;
+      await coach.endSession();
+      stopRemote();
       await goHome("That was great! What next — more exercise, a story, some music, or just talk to me?");
       return;
     }
-    if (has(/how am i|how did i|feedback|coach/)) { sync.send({ cmd: "ask" }); return; }
+    if (has(/how am i|how did i|feedback|coach/)) { coach.askCoach(); return; }
     return;
   }
   if (remoteMode === "piano") {
     if (has(/\b(stop|back|home|enough|exit|done|finish)\b/)) {
-      sync.send({ cmd: "home" });
-      remoteMode = null;
+      music.stop();
+      stopRemote();
       await goHome("What beautiful music! What shall we do next?");
     }
     return;
@@ -149,51 +150,61 @@ async function handleUtterance(raw) {
   await handleUserText(raw);
 }
 
-// ---------- Boot ----------
-if (IS_STAGE) {
-  $("btn-wake").textContent = "🖥 Start camera screen";
-  setSpeakProxy((text) => { if (sync) sync.send({ ev: "say", text }); });
+// ---------- Boot & device pairing ----------
+if (IS_STAGE) $("btn-wake").textContent = "🖥 Start display screen";
+
+function stageShowIdle() {
+  $("stage-video").srcObject = null;
+  $("stage-hud").classList.add("hidden");
+  $("stage-idle").classList.remove("hidden");
 }
 
 function startSync() {
   if (IS_STAGE) {
     sync = initStageSync(ROOM, {
-      onData: async (d) => {
-        if (!d || !d.cmd) return;
-        if (d.cmd === "coach") { show("coach"); await startCoach(); }
-        else if (d.cmd === "piano") { show("piano"); try { await music.start(); } catch {} }
-        else if (d.cmd === "switch") coach.switchExercise();
-        else if (d.cmd === "ask") coach.askCoach();
-        else if (d.cmd === "end") { await coach.endSession(); show("stage"); }
-        else if (d.cmd === "home") show("stage");
+      onData: (d) => {
+        if (!d || !d.ev) return;
+        if (d.ev === "mode") {
+          if (d.mode === "home") stageShowIdle();
+          else $("stage-hud").classList.toggle("hidden", d.mode !== "coach");
+        } else if (d.ev === "hud") {
+          $("stage-ex-name").textContent = d.name || "";
+          $("stage-status-pill").textContent = d.status || "";
+          $("stage-reps").textContent = d.reps || "0";
+          $("stage-bar-fill").style.width = d.bar || "0%";
+          $("stage-feedback").textContent = d.feedback || "";
+        }
       },
+      onStream: (s) => {
+        $("stage-idle").classList.add("hidden");
+        const v = $("stage-video");
+        v.srcObject = s;
+        v.play().catch(() => {});
+      },
+      onCallEnd: stageShowIdle,
       onStatus: (s) => {
         $("stage-status").textContent =
-          s === "connected" ? "✅ Connected to Mitra — say a command to the robot!"
-          : s === "connecting" ? "Connecting to Mitra…"
+          s === "connected" ? "✅ Connected to Mitra — talk to the robot!"
+          : s === "connecting" ? "Connecting to Mitra… (open the app on the phone too)"
           : s === "disconnected" ? "Lost Mitra — reconnecting…"
           : `Waiting for Mitra… (${s})`;
       },
     });
   } else {
     sync = initFaceSync(ROOM, {
-      onData: (d) => {
-        if (d && d.ev === "say" && d.text) {
-          if (captions[currentScreen]) setCaption(d.text);
-          speak(d.text);
-        }
-      },
       onStatus: (s) => {
+        const was = stageConnected;
         stageConnected = s === "connected";
-        if (stageConnected) speak("Big screen connected!");
+        if (stageConnected && !was && currentScreen !== "boot") speak("Big screen connected!");
       },
     });
   }
 }
+// Register for pairing immediately — no need to wake first
+startSync();
 
 $("btn-wake").addEventListener("click", async () => {
   if (IS_STAGE) {
-    startSync();
     show("stage");
     return;
   }
@@ -201,7 +212,6 @@ $("btn-wake").addEventListener("click", async () => {
   if ("wakeLock" in navigator) {
     try { await navigator.wakeLock.request("screen"); } catch {}
   }
-  startSync();
   show("home");
   faces.home.setState("happy");
   const greeting = hasRecognition
@@ -224,13 +234,47 @@ document.querySelectorAll(".mode-btn").forEach(btn =>
   })
 );
 
-// Start exercise — on the big screen if one is connected, else locally
+// While streaming to the big screen, mirror the coach HUD there as JSON
+let hudTimer = null;
+function startHudRelay() {
+  clearInterval(hudTimer);
+  hudTimer = setInterval(() => {
+    sync.send({
+      ev: "hud",
+      name: $("coach-exercise-name").textContent,
+      status: $("coach-status").textContent,
+      reps: $("coach-reps").textContent,
+      bar: $("coach-bar-fill").style.width,
+      feedback: $("coach-feedback").textContent,
+    });
+  }, 400);
+}
+
+function stopRemote() {
+  clearInterval(hudTimer);
+  hudTimer = null;
+  sync.endCall();
+  sync.send({ ev: "mode", mode: "home" });
+  remoteMode = null;
+}
+
+// Start exercise — camera and tracking always run on THIS phone; if a big
+// screen is paired, the composited canvas is streamed to it and the phone
+// keeps showing the face.
 async function beginCoach() {
   if (stageConnected) {
     remoteMode = "coach";
-    sync.send({ cmd: "coach" });
     activeFace.setState("happy");
-    await speak("Let us exercise! Watch the big screen and follow along. I will count for you.");
+    try {
+      await coach.start();      // runs hidden behind the face screen
+    } catch (err) {
+      remoteMode = null;
+      await speak("I could not open my camera eye. Please check camera permission.");
+      return;
+    }
+    sync.send({ ev: "mode", mode: "coach" });
+    sync.callStage($("coach-overlay").captureStream(24));
+    startHudRelay();
     return;
   }
   show("coach");
@@ -240,9 +284,17 @@ async function beginCoach() {
 async function beginPiano() {
   if (stageConnected) {
     remoteMode = "piano";
-    sync.send({ cmd: "piano" });
     activeFace.setState("happy");
-    await speak("Music time! Wave your fingers in front of the big screen. Say stop when you are done.");
+    await speak("Music time! Wave your fingers in front of my camera and watch the big screen!");
+    try {
+      await music.start();      // runs hidden behind the face screen
+    } catch (err) {
+      remoteMode = null;
+      await speak("I could not open my camera eye. Please check camera permission.");
+      return;
+    }
+    sync.send({ ev: "mode", mode: "piano" });
+    sync.callStage($("piano-overlay").captureStream(24));
     return;
   }
   await startPiano();
