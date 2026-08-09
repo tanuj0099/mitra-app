@@ -130,8 +130,11 @@ async function startCoach() {
   try {
     await coach.start();
   } catch (err) {
-    $("coach-feedback").textContent = "Camera unavailable. Allow camera access and use HTTPS.";
-    speak("I could not open my camera eye. Please allow camera access.");
+    const detail = err && err.message ? ` (${err.message})` : "";
+    $("coach-feedback").textContent = err.name === "NotAllowedError"
+      ? "Camera blocked — allow camera access and use HTTPS."
+      : `Could not start: check internet for the pose model${detail}`;
+    speak("I could not open my camera eye. Please check camera permission and internet.");
   }
 }
 
