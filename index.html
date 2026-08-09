@@ -80,17 +80,26 @@
       <button class="ent-btn" data-ent="joke">😄<span>Joke</span></button>
       <button class="ent-btn" data-ent="riddle">🧩<span>Riddle</span></button>
       <button class="ent-btn" data-ent="tune">🎶<span>Play a tune</span></button>
-      <button class="ent-btn" data-ent="piano">🎹<span>Air Piano</span></button>
+      <button class="ent-btn" data-ent="piano">🎶<span>Air Music</span></button>
     </nav>
     <button class="icon-btn back" data-back>←</button>
   </section>
 
-  <!-- Air Piano: hand tracking + on-screen keys -->
+  <!-- Air Music: wave fingers in the air to play notes -->
   <section id="screen-piano" class="screen">
     <video id="piano-video" playsinline muted></video>
     <canvas id="piano-overlay"></canvas>
-    <div id="piano-hint">🎹 Dip your fingers into the keys to play!</div>
+    <div id="piano-hint">🎶 Wave your fingers in the air — higher hand, higher note!</div>
     <button class="icon-btn back" data-back>←</button>
+  </section>
+
+  <!-- Stage idle screen (laptop / big screen mode, ?stage=1) -->
+  <section id="screen-stage" class="screen">
+    <div class="stage-idle">
+      <div class="stage-emoji">🤖</div>
+      <p id="stage-status">Connecting to Mitra…</p>
+      <p class="stage-sub">Exercises and music will appear on this screen</p>
+    </div>
   </section>
 
   <!-- Global hands-free indicators -->
@@ -120,6 +129,7 @@
     </div>
   </div>
 
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>

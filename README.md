@@ -26,6 +26,21 @@ the robot body, runs this web app.
   conversation, and the coach sends camera snapshots to Claude for personalized
   posture feedback. No redeploy needed; the key is stored only on the device.
 
+## Two-screen mode (phone = face, laptop = big screen)
+
+The robot's phone always shows the face; a laptop can act as the "projector"
+that runs the camera modes:
+
+1. On the phone, open the app URL normally and tap wake.
+2. On the laptop, open the **same URL with `?stage=1`** and click
+   "Start camera screen". It connects to the phone automatically (WebRTC via
+   PeerJS) and uses the **laptop's own webcam**.
+3. Say "let's exercise" or "play some music" to the phone — the laptop runs
+   the camera view while the phone keeps showing the face, speaking counts
+   and feedback. If no laptop is connected, the phone uses its own camera.
+
+Multiple teams on one network? Add the same `?room=yourname` to both URLs.
+
 ## Running it
 
 The camera and mic require **HTTPS**, so open the deployed URL on the phone:

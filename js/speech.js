@@ -59,7 +59,12 @@ export function unlockAudio() {
   speechSynthesis.speak(u);
 }
 
+// Stage devices route all speech to the face device instead of local TTS.
+let speakProxy = null;
+export function setSpeakProxy(fn) { speakProxy = fn; }
+
 export function speak(text) {
+  if (speakProxy) { speakProxy(text); return Promise.resolve(); }
   return new Promise((resolve) => {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);

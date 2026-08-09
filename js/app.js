@@ -2,13 +2,23 @@
 // exercise coach, air piano, entertainment, settings.
 
 import { RobotFace } from "./face.js";
-import { initSpeech, unlockAudio, speak, stopSpeaking, listenOnce, hasRecognition, listVoices, setVoice } from "./speech.js";
+import { initSpeech, unlockAudio, speak, stopSpeaking, listenOnce, hasRecognition, listVoices, setVoice, setSpeakProxy } from "./speech.js";
 import { chatReply, getStory, getJoke, getRiddle, getApiKey, setApiKey, testApiKey, hasApiKey } from "./claude.js";
 import { Coach } from "./coach.js";
-import { AirPiano } from "./piano.js";
+import { AirMusic } from "./piano.js";
 import { VoiceLoop } from "./voice.js";
+import { initFaceSync, initStageSync } from "./sync.js";
 
 const $ = (id) => document.getElementById(id);
+
+// Roles: default = face/standalone (phone). ?stage=1 = big screen (laptop)
+// that runs the camera modes on command from the face device.
+const params = new URLSearchParams(location.search);
+const IS_STAGE = params.has("stage");
+const ROOM = params.get("room") || "demo";
+let sync = null;
+let stageConnected = false;
+let remoteMode = null; // face-side: which mode the stage is currently running
 
 // ---------- Faces ----------
 const faces = {
@@ -21,7 +31,7 @@ let activeFace = faces.boot;
 faces.boot.start();
 
 // ---------- Screen navigation ----------
-const screens = ["boot", "home", "chat", "coach", "entertain", "piano"];
+const screens = ["boot", "home", "chat", "coach", "entertain", "piano", "stage"];
 let currentScreen = "boot";
 
 const captions = { home: "home-caption", chat: "chat-caption", entertain: "ent-caption" };
@@ -37,7 +47,7 @@ function setCaption(text) {
 function show(name) {
   stopSpeaking();
   if (currentScreen === "coach" && name !== "coach") coach.stop();
-  if (currentScreen === "piano" && name !== "piano") piano.stop();
+  if (currentScreen === "piano" && name !== "piano") music.stop();
   screens.forEach(s => $(`screen-${s}`).classList.toggle("active", s === name));
   currentScreen = name;
   Object.values(faces).forEach(f => f.stop());
@@ -53,6 +63,7 @@ document.querySelectorAll("[data-back]").forEach(btn =>
 );
 
 async function goHome(sayLine) {
+  if (IS_STAGE) { show("stage"); return; }
   show("home");
   if (sayLine) {
     setCaption(sayLine);
@@ -85,6 +96,27 @@ async function handleUtterance(raw) {
   const has = (re) => re.test(t);
   showHeard(raw);
 
+  // While the stage (laptop) runs a mode, the phone relays voice commands
+  if (remoteMode === "coach") {
+    if (has(/switch|next|change|different exercise/)) { sync.send({ cmd: "switch" }); return; }
+    if (has(/\b(end|stop|done|finish|finished|enough|home|back)\b/)) {
+      sync.send({ cmd: "end" });
+      remoteMode = null;
+      await goHome("That was great! What next — more exercise, a story, some music, or just talk to me?");
+      return;
+    }
+    if (has(/how am i|how did i|feedback|coach/)) { sync.send({ cmd: "ask" }); return; }
+    return;
+  }
+  if (remoteMode === "piano") {
+    if (has(/\b(stop|back|home|enough|exit|done|finish)\b/)) {
+      sync.send({ cmd: "home" });
+      remoteMode = null;
+      await goHome("What beautiful music! What shall we do next?");
+    }
+    return;
+  }
+
   // On the coach screen, only exercise commands — ignore chatter mid-workout
   if (currentScreen === "coach") {
     if (has(/switch|next|change|different exercise/)) { coach.switchExercise(); return; }
@@ -105,8 +137,8 @@ async function handleUtterance(raw) {
   }
 
   // Global intents
-  if (has(/piano|keyboard|play.*fingers|fingers.*play/)) { await startPiano(); return; }
-  if (has(/exercis|workout|work out|physio|stretch|fitness|training/)) { show("coach"); await startCoach(); return; }
+  if (has(/piano|keyboard|air music|play.*fingers|fingers.*play|make.*music/)) { await beginPiano(); return; }
+  if (has(/exercis|workout|work out|physio|stretch|fitness|training/)) { await beginCoach(); return; }
   if (has(/stor(y|ies)|kahani/)) { show("entertain"); await doEnt("story"); return; }
   if (has(/joke|laugh|funny/)) { show("entertain"); await doEnt("joke"); return; }
   if (has(/riddle|puzzle/)) { show("entertain"); await doEnt("riddle"); return; }
@@ -118,11 +150,58 @@ async function handleUtterance(raw) {
 }
 
 // ---------- Boot ----------
+if (IS_STAGE) {
+  $("btn-wake").textContent = "🖥 Start camera screen";
+  setSpeakProxy((text) => { if (sync) sync.send({ ev: "say", text }); });
+}
+
+function startSync() {
+  if (IS_STAGE) {
+    sync = initStageSync(ROOM, {
+      onData: async (d) => {
+        if (!d || !d.cmd) return;
+        if (d.cmd === "coach") { show("coach"); await startCoach(); }
+        else if (d.cmd === "piano") { show("piano"); try { await music.start(); } catch {} }
+        else if (d.cmd === "switch") coach.switchExercise();
+        else if (d.cmd === "ask") coach.askCoach();
+        else if (d.cmd === "end") { await coach.endSession(); show("stage"); }
+        else if (d.cmd === "home") show("stage");
+      },
+      onStatus: (s) => {
+        $("stage-status").textContent =
+          s === "connected" ? "✅ Connected to Mitra — say a command to the robot!"
+          : s === "connecting" ? "Connecting to Mitra…"
+          : s === "disconnected" ? "Lost Mitra — reconnecting…"
+          : `Waiting for Mitra… (${s})`;
+      },
+    });
+  } else {
+    sync = initFaceSync(ROOM, {
+      onData: (d) => {
+        if (d && d.ev === "say" && d.text) {
+          if (captions[currentScreen]) setCaption(d.text);
+          speak(d.text);
+        }
+      },
+      onStatus: (s) => {
+        stageConnected = s === "connected";
+        if (stageConnected) speak("Big screen connected!");
+      },
+    });
+  }
+}
+
 $("btn-wake").addEventListener("click", async () => {
+  if (IS_STAGE) {
+    startSync();
+    show("stage");
+    return;
+  }
   unlockAudio();
   if ("wakeLock" in navigator) {
     try { await navigator.wakeLock.request("screen"); } catch {}
   }
+  startSync();
   show("home");
   faces.home.setState("happy");
   const greeting = hasRecognition
@@ -138,12 +217,36 @@ $("btn-wake").addEventListener("click", async () => {
 document.querySelectorAll(".mode-btn").forEach(btn =>
   btn.addEventListener("click", async () => {
     const mode = btn.dataset.mode;
+    if (mode === "coach") { beginCoach(); return; }
     show(mode);
     if (mode === "chat") startChat();
-    if (mode === "coach") startCoach();
-    if (mode === "entertain") speak("Fun time! Say story, joke, riddle, music, or piano!");
+    if (mode === "entertain") speak("Fun time! Say story, joke, riddle, music, or air music!");
   })
 );
+
+// Start exercise — on the big screen if one is connected, else locally
+async function beginCoach() {
+  if (stageConnected) {
+    remoteMode = "coach";
+    sync.send({ cmd: "coach" });
+    activeFace.setState("happy");
+    await speak("Let us exercise! Watch the big screen and follow along. I will count for you.");
+    return;
+  }
+  show("coach");
+  await startCoach();
+}
+
+async function beginPiano() {
+  if (stageConnected) {
+    remoteMode = "piano";
+    sync.send({ cmd: "piano" });
+    activeFace.setState("happy");
+    await speak("Music time! Wave your fingers in front of the big screen. Say stop when you are done.");
+    return;
+  }
+  await startPiano();
+}
 
 // ---------- Chat ----------
 async function startChat() {
@@ -225,16 +328,16 @@ $("btn-end-session").addEventListener("click", async () => {
   goHome();
 });
 
-// ---------- Air Piano ----------
-const piano = new AirPiano({ video: $("piano-video"), overlay: $("piano-overlay") });
+// ---------- Air Music ----------
+const music = new AirMusic({ video: $("piano-video"), overlay: $("piano-overlay") });
 
 async function startPiano() {
   show("piano");
   try {
-    await speak("Piano time! Hold your hands up and dip your fingers into the keys. Say stop when you are done.");
-    await piano.start();
+    await speak("Music time! Wave your fingers in the air. Higher hand plays higher notes. Say stop when you are done.");
+    await music.start();
   } catch (err) {
-    speak("I could not open my camera eye for the piano. Please check camera permission.");
+    speak("I could not open my camera eye for the music. Please check camera permission.");
     goHome();
   }
 }
@@ -243,7 +346,7 @@ async function startPiano() {
 async function doEnt(kind) {
   stopSpeaking();
   const cap = $("ent-caption");
-  if (kind === "piano") { await startPiano(); return; }
+  if (kind === "piano") { await beginPiano(); return; }
   if (kind === "story") {
     cap.textContent = "Let me think of a nice story…";
     const story = await getStory();
