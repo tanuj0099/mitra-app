@@ -25,60 +25,87 @@ function angleBetween(a, b, c) {
   return (Math.acos(Math.min(1, Math.max(-1, dot / (m1 * m2)))) * 180) / Math.PI;
 }
 
-// All exercises are wheelchair-accessible: seated, upper-body only, and
-// they work with one arm if the other is limited (max of both sides).
 const EXERCISES = [
   {
-    name: "Arm Raises",
-    instructions: "Face me so I can see your head, arms and hips. Raise your arms out to the side like wings, then bring them down slowly.",
-    needed: [L.LS, L.RS, L.LE, L.RE, L.LH, L.RH],
-    framingHint: "I need to see your arms and hips — move back a little.",
-    activeJoints: [L.LS, L.RS],
+    name: "Seated Shoulder Press",
+    instructions: "Sit upright. Hold weights at shoulder height, then press them straight up towards the sky.",
+    needed: [L.LS, L.RS, L.LE, L.RE, L.LW, L.RW],
+    framingHint: "I need to see your arms from shoulders to wrists.",
+    activeJoints: [L.LS, L.RS, L.LE, L.RE],
     metric(lm) {
-      const left = angleBetween(lm[L.LH], lm[L.LS], lm[L.LE]);
-      const right = angleBetween(lm[L.RH], lm[L.RS], lm[L.RE]);
-      return Math.max(left, right);
+      const leftElbow = angleBetween(lm[L.LS], lm[L.LE], lm[L.LW]);
+      const rightElbow = angleBetween(lm[L.RS], lm[L.RE], lm[L.RW]);
+      return Math.max(leftElbow, rightElbow);
     },
+    checkForm(lm, coach) {
+      const maxElbow = Math.max(angleBetween(lm[L.LS], lm[L.LE], lm[L.LW]), angleBetween(lm[L.RS], lm[L.RE], lm[L.RW]));
+      if (maxElbow > 175) coach.hint("Careful not to lock your elbows completely.");
+    }
   },
   {
-    name: "Elbow Curls",
-    instructions: "Face me with your arms relaxed. Bend your elbows to bring your hands up towards your shoulders, then lower them slowly.",
+    name: "Seated Rows",
+    instructions: "Sit tall with arms straight forward. Pull your elbows straight back and squeeze your shoulder blades.",
     needed: [L.LS, L.RS, L.LE, L.RE, L.LW, L.RW],
-    framingHint: "I need to see your arms down to the wrists — move back a little.",
+    framingHint: "I need to see your shoulders and elbows.",
     activeJoints: [L.LE, L.RE],
     metric(lm) {
-      // higher = more curled
-      const left = 180 - angleBetween(lm[L.LS], lm[L.LE], lm[L.LW]);
-      const right = 180 - angleBetween(lm[L.RS], lm[L.RE], lm[L.RW]);
-      return Math.max(left, right);
-    },
+      const leftElbow = angleBetween(lm[L.LS], lm[L.LE], lm[L.LW]);
+      const rightElbow = angleBetween(lm[L.RS], lm[L.RE], lm[L.RW]);
+      return 180 - Math.min(leftElbow, rightElbow);
+    }
   },
   {
-    name: "Overhead Reach",
-    instructions: "Face me and reach your hands up towards the sky as high as feels comfortable, then bring them down slowly.",
-    needed: [L.LS, L.RS, L.LW, L.RW, L.LH, L.RH],
-    framingHint: "I need to see your hands even when raised — move back a little.",
-    activeJoints: [L.LS, L.RS],
-    metric(lm) {
-      const left = angleBetween(lm[L.LH], lm[L.LS], lm[L.LW]);
-      const right = angleBetween(lm[L.RH], lm[L.RS], lm[L.RW]);
-      return Math.max(left, right);
-    },
-  },
-  {
-    name: "Side Bends",
-    instructions: "Sit tall facing me. Lean your upper body gently to one side, come back up, then lean to the other side.",
+    name: "Seated Trunk Rotations",
+    instructions: "Cross your hands over your chest. Slowly twist your upper body to one side, then the other.",
     needed: [L.LS, L.RS, L.LH, L.RH],
-    framingHint: "I need to see your shoulders and hips — move back a little.",
+    framingHint: "I need to see your shoulders and hips.",
     activeJoints: [L.LS, L.RS],
-    minRange: 10,
     metric(lm) {
-      // torso tilt from vertical, in degrees
+      const shoulderCenterX = (lm[L.LS].x + lm[L.RS].x) / 2;
+      const hipCenterX = (lm[L.LH].x + lm[L.RH].x) / 2;
+      return Math.abs(shoulderCenterX - hipCenterX) * 100;
+    },
+    checkForm(lm, coach) {
       const ms = { x: (lm[L.LS].x + lm[L.RS].x) / 2, y: (lm[L.LS].y + lm[L.RS].y) / 2 };
       const mh = { x: (lm[L.LH].x + lm[L.RH].x) / 2, y: (lm[L.LH].y + lm[L.RH].y) / 2 };
-      return Math.abs(Math.atan2(ms.x - mh.x, mh.y - ms.y) * 180 / Math.PI);
-    },
+      const tilt = Math.abs(Math.atan2(ms.x - mh.x, mh.y - ms.y) * 180 / Math.PI);
+      if (tilt > 15) coach.hint("Keep your spine tall, don't lean to the side.");
+    }
   },
+  {
+    name: "Seated Lateral Raises",
+    instructions: "Keep arms slightly bent. Raise both arms out to the sides until they reach shoulder height.",
+    needed: [L.LS, L.RS, L.LE, L.RE, L.LH, L.RH],
+    framingHint: "I need to see your full arm span.",
+    activeJoints: [L.LS, L.RS],
+    metric(lm) {
+      const leftShoulder = angleBetween(lm[L.LH], lm[L.LS], lm[L.LE]);
+      const rightShoulder = angleBetween(lm[L.RH], lm[L.RS], lm[L.RE]);
+      return Math.max(leftShoulder, rightShoulder);
+    },
+    checkForm(lm, coach) {
+      const leftShoulder = angleBetween(lm[L.LH], lm[L.LS], lm[L.LE]);
+      const rightShoulder = angleBetween(lm[L.RH], lm[L.RS], lm[L.RE]);
+      if (leftShoulder > 100 || rightShoulder > 100) coach.hint("Don't lift your arms higher than your shoulders.");
+    }
+  },
+  {
+    name: "Seated Chest Press",
+    instructions: "Hold weights at your chest, then press them straight forward.",
+    needed: [L.LS, L.RS, L.LE, L.RE, L.LW, L.RW],
+    framingHint: "I need to see your shoulders, elbows, and wrists.",
+    activeJoints: [L.LS, L.RS, L.LE, L.RE],
+    metric(lm) {
+      const leftElbow = angleBetween(lm[L.LS], lm[L.LE], lm[L.LW]);
+      const rightElbow = angleBetween(lm[L.RS], lm[L.RE], lm[L.RW]);
+      return Math.max(leftElbow, rightElbow);
+    },
+    checkForm(lm, coach) {
+      if (lm[L.LE].y > lm[L.LS].y + 0.1 || lm[L.RE].y > lm[L.RS].y + 0.1) {
+         coach.hint("Keep your elbows up, don't let them drop.");
+      }
+    }
+  }
 ];
 
 // Draw the camera frame mirrored and cover-cropped into the canvas, so the
@@ -273,8 +300,10 @@ export class Coach {
     }
     this.lostFrames = 0;
 
-    const raw = this.exercise.metric(lm);
-    this.smoothAngle = this.smoothAngle === null ? raw : this.smoothAngle * 0.7 + raw * 0.3;
+    let currentAngle = this.exercise.metric(lm);
+    if (this.exercise.checkForm) this.exercise.checkForm(lm, this);
+    if (this.smoothAngle === null) this.smoothAngle = currentAngle;
+    else this.smoothAngle = this.smoothAngle * 0.7 + currentAngle * 0.3;
     const angle = this.smoothAngle;
     
     this.minSeen = Math.min(this.minSeen, angle);
