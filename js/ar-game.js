@@ -195,6 +195,7 @@ export async function startARGame() {
     arStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
     const video = document.getElementById("ar-camera-feed");
     video.srcObject = arStream;
+    await video.play();
   } catch (err) {
     console.error("Camera access denied or unavailable:", err);
   }

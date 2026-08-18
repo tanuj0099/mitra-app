@@ -62,9 +62,9 @@ function spawnCoin() {
   const camPos = new THREE.Vector3();
   cam3D.getWorldPosition(camPos);
   
-  // Spawn coin 1.5 meters away, slightly below eye level (e.g. 0.5m above ground)
+  // Spawn coin 1.5 meters away, near the ground
   const targetPos = camPos.clone().add(direction.multiplyScalar(1.5));
-  targetPos.y = 0.5;
+  targetPos.y = -1.2; // Move it closer to ground level
   
   coin.setAttribute("position", `${targetPos.x} ${targetPos.y} ${targetPos.z}`);
   coin.setAttribute("scale", "1 1 1");
@@ -89,7 +89,7 @@ function gameLoop() {
     
     const dist = camPos.distanceTo(coinPos);
     // If user physically moves the phone close to the coin, collect it!
-    if (dist < 0.6) {
+    if (dist < 1.2) {
       collectCoin();
     }
   }
@@ -195,6 +195,7 @@ export async function startARGame() {
     arStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
     const video = document.getElementById("ar-camera-feed");
     video.srcObject = arStream;
+    await video.play();
   } catch (err) {
     console.error("Camera access denied or unavailable:", err);
   }
@@ -212,7 +213,7 @@ export async function startARGame() {
     window.addEventListener("devicemotion", handleMotion);
   }
   
-  await speak("I have placed a hologram. Follow the red compass arrow to find it!");
+  await speak("I have placed a golden coin! Move your phone toward it to collect it.");
 }
 
 export function stopARGame() {
