@@ -128,16 +128,23 @@ export class AirMusic {
             f.trail.push({ x: nx * w, y: ny * h });
             if (f.trail.length > 7) f.trail.shift();
 
-            // fading trail
-            ctx.lineCap = "round";
+            // magical glowing orb trail
             for (let i = 1; i < f.trail.length; i++) {
-              ctx.strokeStyle = TIP_COLORS[fi];
-              ctx.globalAlpha = (i / f.trail.length) * 0.5;
-              ctx.lineWidth = Math.max(2, w * 0.004) * (i / f.trail.length);
+              const alpha = (i / f.trail.length);
+              
+              // glowing halo
+              ctx.fillStyle = TIP_COLORS[fi];
+              ctx.globalAlpha = alpha * 0.6;
               ctx.beginPath();
-              ctx.moveTo(f.trail[i - 1].x, f.trail[i - 1].y);
-              ctx.lineTo(f.trail[i].x, f.trail[i].y);
-              ctx.stroke();
+              ctx.arc(f.trail[i].x, f.trail[i].y, w * 0.015 * alpha, 0, Math.PI * 2);
+              ctx.fill();
+              
+              // inner bright core
+              ctx.fillStyle = "#fff";
+              ctx.globalAlpha = alpha * 0.9;
+              ctx.beginPath();
+              ctx.arc(f.trail[i].x, f.trail[i].y, w * 0.005 * alpha, 0, Math.PI * 2);
+              ctx.fill();
             }
             ctx.globalAlpha = 1;
 

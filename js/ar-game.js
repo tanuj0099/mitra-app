@@ -14,18 +14,23 @@ function setupScene() {
   container.innerHTML = `
     <a-scene embedded vr-mode-ui="enabled: false" background="transparent: true">
       <a-camera position="0 1.6 0" look-controls="magicWindowTrackingEnabled: true" wasd-controls="enabled: false">
-        <!-- HUD Compass pointing to coin -->
         <a-entity id="hud-compass" position="0 -0.5 -1">
-          <a-cone color="red" radius-bottom="0.05" height="0.2" rotation="-90 0 0"></a-cone>
+          <a-cone color="#B8965A" radius-bottom="0.05" height="0.2" rotation="-90 0 0"></a-cone>
           <a-text value="Follow!" color="white" align="center" width="1.5" position="0 -0.15 0"></a-text>
         </a-entity>
       </a-camera>
       
-      <!-- Hologram Coin / Badge -->
-      <a-entity id="ar-coin" position="0 1.5 -8" scale="0.5 0.5 0.5" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000">
-        <a-cylinder color="gold" height="0.1" radius="1" rotation="90 0 0"></a-cylinder>
-        <a-text value="Happy" color="black" align="center" width="6" position="0 0 0.06"></a-text>
-        <a-text value="Badge" color="black" align="center" width="4" position="0 -0.5 0.06"></a-text>
+      <!-- Hologram Water Droplet -->
+      <a-entity id="ar-coin" position="0 1.5 -8" scale="0.5 0.5 0.5" animation="property: position; dir: alternate; loop: true; dur: 2000; to: 0 1.7 -8">
+        <a-sphere color="#37e0ff" radius="0.3" opacity="0.8"></a-sphere>
+        <a-sphere color="#ffffff" radius="0.1" position="-0.1 0.1 0.2"></a-sphere>
+        <a-light type="point" color="#37e0ff" intensity="1" distance="2"></a-light>
+      </a-entity>
+      
+      <!-- Central Zen Sapling -->
+      <a-entity id="ar-sapling" position="0 -0.5 -4" scale="1 1 1">
+        <a-cylinder color="#3a2f2a" height="0.1" radius="1.2" position="0 0 0"></a-cylinder>
+        <a-cone id="sapling-plant" color="#4F7A5B" radius-bottom="0.2" height="0.5" position="0 0.3 0"></a-cone>
       </a-entity>
     </a-scene>
   `;
@@ -137,15 +142,23 @@ async function collectCoin() {
     const textPos = camPos.clone().add(camDir.multiplyScalar(2));
     
     const plusOne = document.createElement("a-text");
-    plusOne.setAttribute("value", "+1 Badge!");
-    plusOne.setAttribute("color", "green");
+    plusOne.setAttribute("value", "+1 Droplet!");
+    plusOne.setAttribute("color", "#37e0ff");
     plusOne.setAttribute("align", "center");
     plusOne.setAttribute("scale", "2 2 2");
     plusOne.setAttribute("position", `${textPos.x} 1.5 ${textPos.z}`);
     plusOne.setAttribute("animation", `property: position; to: ${textPos.x} 3 ${textPos.z}; dur: 1500; easing: easeOutQuad`);
     document.querySelector("a-scene").appendChild(plusOne);
     
-    speak("Badge collected! Follow the arrow to the next one!");
+    // Grow sapling
+    const sapling = document.getElementById("sapling-plant");
+    if (sapling) {
+       const curScale = sapling.getAttribute("scale") || {x:1, y:1, z:1};
+       const newScale = `${curScale.x * 1.1} ${curScale.y * 1.2} ${curScale.z * 1.1}`;
+       sapling.setAttribute("animation__grow", `property: scale; to: ${newScale}; dur: 1000; easing: easeOutElastic`);
+    }
+    
+    speak("Water collected! Your garden is growing. Find the next drop.");
     
     setTimeout(() => {
       plusOne.remove();

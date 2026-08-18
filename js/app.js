@@ -713,9 +713,13 @@ $("btn-test-voice").addEventListener("click", () => {
 });
 
 $("btn-settings").addEventListener("click", () => {
-  show("settings");
+  modal.classList.remove("hidden");
   $("room-code").textContent = ROOM || "";
   refreshVoiceList();
+});
+
+$("btn-close-settings").addEventListener("click", () => {
+  modal.classList.add("hidden");
 });
 
 // ---------- Progress ----------

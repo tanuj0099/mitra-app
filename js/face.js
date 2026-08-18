@@ -79,7 +79,7 @@ export class RobotFace {
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      if (this.state === "happy") {
+      if (this.state === "happy" || this.state === "joke") {
         // crescent squint: carve away the lower part of the eye
         ctx.save();
         ctx.globalCompositeOperation = "destination-out";
@@ -92,6 +92,15 @@ export class RobotFace {
         ctx.fillStyle = "rgba(255,255,255,0.9)";
         ctx.beginPath();
         ctx.ellipse(ex - eyeRx * 0.3, cy - ry * 0.35, eyeRx * 0.18, ry * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      
+      // Teardrops for sad state
+      if (this.state === "sad") {
+        ctx.fillStyle = "rgba(55, 224, 255, 0.8)";
+        ctx.beginPath();
+        // Drop 1
+        ctx.arc(ex, cy + ry * 1.2 + Math.sin(t * 0.003 + side) * 10, ry * 0.2, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -110,11 +119,26 @@ export class RobotFace {
         const y = my + Math.sin(this.mouthPhase + i * 0.9) * h * 0.02 * (0.4 + Math.random() * 0.6);
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       }
+      ctx.stroke();
+    } else if (this.state === "joke") {
+      // open mouth with teeth
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(cx, my - h * 0.03, w * 0.08, 0, Math.PI, false);
+      ctx.fill();
+      
+      // teeth
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillRect(cx - w * 0.06, my - h * 0.03, w * 0.12, h * 0.015);
     } else if (this.state === "happy") {
       ctx.arc(cx, my - h * 0.03, w * 0.055, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.stroke();
+    } else if (this.state === "sad") {
+      ctx.arc(cx, my + h * 0.02, w * 0.05, 1.2 * Math.PI, 1.8 * Math.PI);
+      ctx.stroke();
     } else {
       ctx.arc(cx, my - h * 0.035, w * 0.04, 0.2 * Math.PI, 0.8 * Math.PI);
+      ctx.stroke();
     }
-    ctx.stroke();
   }
 }
