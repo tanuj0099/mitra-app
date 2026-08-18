@@ -1,11 +1,15 @@
 // AI logic using a secure Vercel Serverless Function backend.
 // In Offline mode (no API key in Vercel), it falls back to rule-based responses.
 
+// Use absolute URL if running locally (e.g. VS Code Live Server) so it still hits the Vercel backend
+const IS_LOCAL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const API_BASE = IS_LOCAL ? "https://inhack-gzix6hid2-tanujrajdev-2466s-projects.vercel.app" : "";
+
 export let hasBackendKey = false;
 
 export async function checkBackendStatus() {
   try {
-    const res = await fetch("/api/status");
+    const res = await fetch(`${API_BASE}/api/status`);
     if (!res.ok) return false;
     const data = await res.json();
     hasBackendKey = data.hasKey === true;
@@ -28,7 +32,7 @@ async function callAI(messages, { system = PERSONA, maxTokens = 250 } = {}) {
   if (!hasBackendKey) return null;
   
   try {
-    const res = await fetch("/api/ai", {
+    const res = await fetch(`${API_BASE}/api/ai`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ system, messages, maxTokens }),
