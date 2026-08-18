@@ -33,10 +33,15 @@ async function callAI(messages, { system = PERSONA, maxTokens = 250 } = {}) {
       body: JSON.stringify({ system, messages, maxTokens }),
     });
     
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("AI API Error:", res.status, errText);
+      return null;
+    }
     const data = await res.json();
     return data.reply || null;
   } catch (err) {
+    console.error("AI fetch failed:", err);
     return null;
   }
 }
