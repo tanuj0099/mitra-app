@@ -1,0 +1,497 @@
+// Exercise coach: MediaPipe pose detection + guided rep counting.
+// Session flow: positioning (get fully in frame) → calibration (2 practice
+// reps to learn the user's own range of motion) → active counting with
+// personalized thresholds. All detection runs live on-device; nothing is
+// recorded or uploaded.
+
+import { speak } from "./speech.js";
+import { coachFeedback } from "./claude.js";
+import { logSession } from "./tracking.js";
+import { CoinField } from "./collect.js";
+
+const MP_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
+
+// Landmark indices
+const L = { LS: 11, RS: 12, LE: 13, RE: 14, LW: 15, RW: 16, LH: 23, RH: 24, LK: 25, RK: 26, LA: 27, RA: 28 };
+
+function angleBetween(a, b, c) {
+  // angle at b (degrees) formed by points a-b-c
+  const v1 = { x: a.x - b.x, y: a.y - b.y };
+  const v2 = { x: c.x - b.x, y: c.y - b.y };
+  const dot = v1.x * v2.x + v1.y * v2.y;
+  const m1 = Math.hypot(v1.x, v1.y), m2 = Math.hypot(v2.x, v2.y);
+  if (!m1 || !m2) return 0;
+  return (Math.acos(Math.min(1, Math.max(-1, dot / (m1 * m2)))) * 180) / Math.PI;
+}
+
+const EXERCISES = [
+  {
+    name: "Seated Shoulder Press",
+    instructions: "Sit upright. Hold weights at shoulder height, then press them straight up towards the sky.",
+    needed: [L.LS, L.RS, L.LE, L.RE, L.LW, L.RW],
+    framingHint: "I need to see your arms from shoulders to wrists.",
+    activeJoints: [L.LS, L.RS, L.LE, L.RE],
+    metric(lm) {
+      const leftElbow = angleBetween(lm[L.LS], lm[L.LE], lm[L.LW]);
+      const rightElbow = angleBetween(lm[L.RS], lm[L.RE], lm[L.RW]);
+      return Math.max(leftElbow, rightElbow);
+    },
+    checkForm(lm, coach) {
+      const maxElbow = Math.max(angleBetween(lm[L.LS], lm[L.LE], lm[L.LW]), angleBetween(lm[L.RS], lm[L.RE], lm[L.RW]));
+      if (maxElbow > 175) coach.hint("Careful not to lock your elbows completely.");
+    }
+  },
+  {
+    name: "Seated Rows",
+    instructions: "Sit tall with arms straight forward. Pull your elbows straight back and squeeze your shoulder blades.",
+    needed: [L.LS, L.RS, L.LE, L.RE, L.LW, L.RW],
+    framingHint: "I need to see your shoulders and elbows.",
+    activeJoints: [L.LE, L.RE],
+    metric(lm) {
+      const leftElbow = angleBetween(lm[L.LS], lm[L.LE], lm[L.LW]);
+      const rightElbow = angleBetween(lm[L.RS], lm[L.RE], lm[L.RW]);
+      return 180 - Math.min(leftElbow, rightElbow);
+    }
+  },
+  {
+    name: "Seated Trunk Rotations",
+    instructions: "Cross your hands over your chest. Slowly twist your upper body to one side, then the other.",
+    needed: [L.LS, L.RS, L.LH, L.RH],
+    framingHint: "I need to see your shoulders and hips.",
+    activeJoints: [L.LS, L.RS],
+    metric(lm) {
+      const shoulderCenterX = (lm[L.LS].x + lm[L.RS].x) / 2;
+      const hipCenterX = (lm[L.LH].x + lm[L.RH].x) / 2;
+      return Math.abs(shoulderCenterX - hipCenterX) * 100;
+    },
+    checkForm(lm, coach) {
+      const ms = { x: (lm[L.LS].x + lm[L.RS].x) / 2, y: (lm[L.LS].y + lm[L.RS].y) / 2 };
+      const mh = { x: (lm[L.LH].x + lm[L.RH].x) / 2, y: (lm[L.LH].y + lm[L.RH].y) / 2 };
+      const tilt = Math.abs(Math.atan2(ms.x - mh.x, mh.y - ms.y) * 180 / Math.PI);
+      if (tilt > 15) coach.hint("Keep your spine tall, don't lean to the side.");
+    }
+  },
+  {
+    name: "Seated Lateral Raises",
+    instructions: "Keep arms slightly bent. Raise both arms out to the sides until they reach shoulder height.",
+    needed: [L.LS, L.RS, L.LE, L.RE, L.LH, L.RH],
+    framingHint: "I need to see your full arm span.",
+    activeJoints: [L.LS, L.RS],
+    metric(lm) {
+      const leftShoulder = angleBetween(lm[L.LH], lm[L.LS], lm[L.LE]);
+      const rightShoulder = angleBetween(lm[L.RH], lm[L.RS], lm[L.RE]);
+      return Math.max(leftShoulder, rightShoulder);
+    },
+    checkForm(lm, coach) {
+      const leftShoulder = angleBetween(lm[L.LH], lm[L.LS], lm[L.LE]);
+      const rightShoulder = angleBetween(lm[L.RH], lm[L.RS], lm[L.RE]);
+      if (leftShoulder > 100 || rightShoulder > 100) coach.hint("Don't lift your arms higher than your shoulders.");
+    }
+  },
+  {
+    name: "Seated Chest Press",
+    instructions: "Hold weights at your chest, then press them straight forward.",
+    needed: [L.LS, L.RS, L.LE, L.RE, L.LW, L.RW],
+    framingHint: "I need to see your shoulders, elbows, and wrists.",
+    activeJoints: [L.LS, L.RS, L.LE, L.RE],
+    metric(lm) {
+      const leftElbow = angleBetween(lm[L.LS], lm[L.LE], lm[L.LW]);
+      const rightElbow = angleBetween(lm[L.RS], lm[L.RE], lm[L.RW]);
+      return Math.max(leftElbow, rightElbow);
+    },
+    checkForm(lm, coach) {
+      if (lm[L.LE].y > lm[L.LS].y + 0.1 || lm[L.RE].y > lm[L.RS].y + 0.1) {
+         coach.hint("Keep your elbows up, don't let them drop.");
+      }
+    }
+  }
+];
+
+// Draw the camera frame mirrored and cover-cropped into the canvas, so the
+// canvas is a complete self-contained view (streamable to a second screen).
+export function drawVideoCoverMirrored(ctx, video, w, h) {
+  const vw = video.videoWidth, vh = video.videoHeight;
+  if (!vw || !vh) return;
+  const scale = Math.max(w / vw, h / vh);
+  const sw = w / scale, sh = h / scale;
+  const sx = (vw - sw) / 2, sy = (vh - sh) / 2;
+  ctx.save();
+  ctx.translate(w, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
+  ctx.restore();
+}
+
+const STABLE_FRAMES_NEEDED = 45;   // ~1.5-2s fully visible before starting
+const LOST_FRAMES_LIMIT = 45;      // lose the user this long → back to positioning
+const CALIB_REPS_NEEDED = 2;
+const MIN_RANGE_DEG = 25;          // minimum motion range to count as movement
+const MIN_REP_GAP_MS = 900;
+
+export class Coach {
+  constructor({ video, overlay, hud }) {
+    this.video = video;
+    this.overlay = overlay;
+    this.hud = hud; // { name, reps, feedback, status, barFill }
+    this.landmarker = null;
+    this.running = false;
+    this.exerciseIdx = 0;
+    this.lastSpokenHint = "";
+    this.lastHintAt = 0;
+    this.coinField = new CoinField();
+    this.sessionStart = performance.now();
+    this.lastMovementTime = performance.now();
+    this.lastMovementAngle = 0;
+    this.safetyTier = 0;
+    this.resetSession();
+  }
+
+  resetSession() {
+    this.state = "positioning";
+    this.reps = 0;
+    this.phase = "down";
+    this.smoothAngle = null;
+    this.stableFrames = 0;
+    this.lostFrames = 0;
+    this.minSeen = 999;
+    this.maxSeen = 0;
+    this.calibReps = 0;
+    this.calibAbove = false;
+    this.upT = null;
+    this.downT = null;
+    this.peakAngle = 0;
+    this.lastRepAt = 0;
+    this.lastFeedbackRep = 0;
+    if (this.coinField) this.coinField.resetSession();
+    this.sessionStart = performance.now();
+    this.lastMovementTime = performance.now();
+    this.safetyTier = 0;
+  }
+
+  get exercise() { return EXERCISES[this.exerciseIdx]; }
+
+  async start() {
+    this.hud.feedback.textContent = "Loading pose model…";
+    const vision = await import(MP_URL);
+    const fileset = await vision.FilesetResolver.forVisionTasks(`${MP_URL}/wasm`);
+    this.landmarker = await vision.PoseLandmarker.createFromOptions(fileset, {
+      baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
+      runningMode: "VIDEO",
+      numPoses: 1,
+    });
+    this.PoseLandmarker = vision.PoseLandmarker;
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user" },
+      audio: false,
+    });
+    this.video.srcObject = stream;
+    await this.video.play();
+
+    this.running = true;
+    this.hud.name.textContent = this.exercise.name;
+    this.hud.feedback.textContent = "";
+    this.setStatus("👀 Looking for you…", "wait");
+    await speak(`${this.exercise.name}! ${this.exercise.instructions}`);
+    this.loop();
+  }
+
+  stop() {
+    this.running = false;
+    const stream = this.video.srcObject;
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    this.video.srcObject = null;
+  }
+
+  switchExercise() {
+    this.exerciseIdx = (this.exerciseIdx + 1) % EXERCISES.length;
+    this.resetSession();
+    this.hud.name.textContent = this.exercise.name;
+    this.hud.reps.textContent = "0";
+    this.setStatus("👀 Looking for you…", "wait");
+    speak(`New exercise: ${this.exercise.name}. ${this.exercise.instructions}`);
+  }
+
+  setStatus(text, kind) {
+    this.hud.status.textContent = text;
+    this.hud.status.className = `coach-status ${kind || ""}`;
+  }
+
+  hint(text) {
+    this.hud.feedback.textContent = text;
+    const now = performance.now();
+    if (text !== this.lastSpokenHint || now - this.lastHintAt > 8000) {
+      this.lastSpokenHint = text;
+      this.lastHintAt = now;
+      speak(text);
+    }
+  }
+
+  loop() {
+    if (!this.running) return;
+    const ctx = this.overlay.getContext("2d");
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    // fall back to 720p when the canvas is hidden (streaming to a big screen)
+    const w = (this.overlay.clientWidth || 1280) * dpr, h = (this.overlay.clientHeight || 720) * dpr;
+    if (this.overlay.width !== w || this.overlay.height !== h) {
+      this.overlay.width = w; this.overlay.height = h;
+    }
+
+    if (this.video.readyState >= 2) {
+      const result = this.landmarker.detectForVideo(this.video, performance.now());
+      ctx.clearRect(0, 0, w, h);
+      drawVideoCoverMirrored(ctx, this.video, w, h);
+      const lm = result.landmarks && result.landmarks[0];
+      const visible = lm ? this.checkVisibility(lm) : false;
+      if (lm) {
+        this.drawSkeleton(ctx, lm, w, h, visible);
+        if (this.state === "active") {
+          this.coinField.update([lm[15], lm[16]]); // Left and right wrists
+        }
+        this.coinField.draw(ctx, w, h);
+      }
+      this.process(lm, visible);
+    }
+    requestAnimationFrame(() => this.loop());
+  }
+
+  checkVisibility(lm) {
+    // every needed joint clearly detected and inside the frame
+    return this.exercise.needed.every(i => {
+      const p = lm[i];
+      const vis = p.visibility === undefined ? 1 : p.visibility;
+      return vis > 0.5 && p.x > 0.02 && p.x < 0.98 && p.y > 0.02 && p.y < 0.98;
+    });
+  }
+
+  process(lm, visible) {
+    if (this.state === "positioning") {
+      if (visible) {
+        this.stableFrames++;
+        this.setStatus("👁 I can see you!", "ok");
+        if (this.stableFrames >= STABLE_FRAMES_NEEDED) {
+          this.state = "calibrating";
+          this.minSeen = 999; this.maxSeen = 0;
+          this.calibReps = 0; this.calibAbove = false;
+          this.setStatus("🎯 Practice time", "calib");
+          this.hint("I can see you! Show me two slow practice moves.");
+        }
+      } else {
+        this.stableFrames = 0;
+        this.setStatus("👀 Looking for you…", "wait");
+        if (lm) this.hint(this.exercise.framingHint);
+        else this.hint("Come in front of my camera so I can see you!");
+      }
+      this.updateBar(0);
+      return;
+    }
+
+    // calibrating / active both need the user visible
+    if (!visible) {
+      this.lostFrames++;
+      if (this.lostFrames > LOST_FRAMES_LIMIT) {
+        this.state = "positioning";
+        this.stableFrames = 0;
+        this.setStatus("👀 Where did you go?", "wait");
+        this.hint("I lost you! Please come back into the frame.");
+      }
+      return;
+    }
+    this.lostFrames = 0;
+
+    let currentAngle = this.exercise.metric(lm);
+    if (this.exercise.checkForm) this.exercise.checkForm(lm, this);
+    if (this.smoothAngle === null) this.smoothAngle = currentAngle;
+    else this.smoothAngle = this.smoothAngle * 0.7 + currentAngle * 0.3;
+    const angle = this.smoothAngle;
+    
+    this.minSeen = Math.min(this.minSeen, angle);
+    this.maxSeen = Math.max(this.maxSeen, angle);
+    
+    // Inactivity / Fall detection
+    if (Math.abs(angle - this.lastMovementAngle) > 10) {
+      this.lastMovementTime = performance.now();
+      this.lastMovementAngle = angle;
+    }
+    
+    if (performance.now() - this.lastMovementTime > 60000 && this.safetyTier === 0) {
+      this.safetyTier = 1;
+      this.stop();
+      window.dispatchEvent(new CustomEvent("safety-check-tier1"));
+    }
+    const range = this.maxSeen - this.minSeen;
+
+    if (this.state === "calibrating") {
+      if (range < (this.exercise.minRange || MIN_RANGE_DEG)) { 
+        this.updateBar(0); 
+        // If range is too small, allow minSeen to drift so we don't get permanently stuck at 999
+        this.minSeen = Math.min(this.minSeen, angle);
+        this.maxSeen = Math.max(this.maxSeen, angle);
+        return; 
+      }
+      const mid = this.minSeen + range / 2;
+      this.updateBar((angle - this.minSeen) / range);
+      if (!this.calibAbove && angle > mid + range * 0.25) {
+        this.calibAbove = true;
+      } else if (this.calibAbove && angle < mid - range * 0.25) {
+        this.calibAbove = false;
+        this.calibReps++;
+        if (this.calibReps < CALIB_REPS_NEEDED) speak("Good, one more!");
+        else {
+          // STRICTER personalized thresholds to prevent random counting
+          this.upT = this.minSeen + range * 0.80;
+          this.downT = this.minSeen + range * 0.20;
+          this.state = "active";
+          this.phase = "down";
+          this.reps = 0;
+          this.hud.reps.textContent = "0";
+          this.setStatus("💪 Counting!", "ok");
+          this.hint("Got it! Now for real — begin!");
+        }
+      }
+      return;
+    }
+
+    // active
+    this.updateBar((angle - this.downT) / Math.max(1, this.upT - this.downT));
+    if (this.phase === "down" && angle > this.upT) {
+      this.phase = "up";
+      this.peakAngle = angle;
+      // Spawn a coin when reaching the top phase
+      const spawnX = 0.2 + Math.random() * 0.6; // random x across middle
+      const spawnY = 0.15 + Math.random() * 0.15; // upper area
+      this.coinField.spawn(spawnX, spawnY);
+    } else if (this.phase === "up") {
+      this.peakAngle = Math.max(this.peakAngle, angle);
+      if (angle < this.downT && performance.now() - this.lastRepAt > MIN_REP_GAP_MS) {
+        this.phase = "down";
+        this.lastRepAt = performance.now();
+        this.reps++;
+        this.hud.reps.textContent = String(this.reps);
+        speak(String(this.reps));
+        if (this.reps % 5 === 0) this.giveFeedback();
+      }
+    }
+  }
+
+  updateBar(frac) {
+    const pct = Math.round(Math.min(1, Math.max(0, frac)) * 100);
+    this.hud.barFill.style.width = pct + "%";
+    this.hud.barFill.classList.toggle("full", pct >= 100);
+  }
+
+  drawSkeleton(ctx, lm, w, h, visible) {
+    // Mirror to match the mirrored video
+    ctx.save();
+    ctx.translate(w, 0);
+    ctx.scale(-1, 1);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    const lineColor = visible ? "rgba(55, 224, 255, 0.6)" : "rgba(255, 180, 84, 0.4)";
+    ctx.strokeStyle = lineColor;
+    ctx.shadowColor = visible ? "rgba(55, 224, 255, 0.8)" : "rgba(255, 180, 84, 0.8)";
+    ctx.shadowBlur = w * 0.015;
+    ctx.lineWidth = Math.max(4, w * 0.005);
+    for (const [a, b] of this.PoseLandmarker.POSE_CONNECTIONS.map(c => [c.start, c.end])) {
+      // Filter out face landmarks (0-10) and fine finger details (17-22) for a cleaner look
+      if (a < 11 || b < 11 || (a >= 17 && a <= 22) || (b >= 17 && b <= 22) || a > 32 || b > 32) continue;
+      ctx.beginPath();
+      ctx.moveTo(lm[a].x * w, lm[a].y * h);
+      ctx.lineTo(lm[b].x * w, lm[b].y * h);
+      ctx.stroke();
+    }
+    
+    // Draw premium glowing joints
+    for (let i = 11; i <= 28; i++) {
+      if (i >= 17 && i <= 22) continue; // skip finger joints
+      const active = this.exercise.activeJoints.includes(i);
+      const r = Math.max(6, w * (active ? 0.012 : 0.008));
+      const cx = lm[i].x * w;
+      const cy = lm[i].y * h;
+      
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      
+      const grad = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r);
+      if (active) {
+        grad.addColorStop(0, "rgba(255, 255, 255, 1)");
+        grad.addColorStop(0.5, "rgba(125, 255, 160, 0.9)");
+        grad.addColorStop(1, "rgba(125, 255, 160, 0.2)");
+        ctx.shadowColor = "#7dffa0";
+      } else {
+        grad.addColorStop(0, "rgba(255, 255, 255, 0.8)");
+        grad.addColorStop(0.5, "rgba(55, 224, 255, 0.7)");
+        grad.addColorStop(1, "rgba(55, 224, 255, 0.1)");
+        ctx.shadowColor = "#37e0ff";
+      }
+      
+      ctx.fillStyle = grad;
+      ctx.shadowBlur = w * 0.02;
+      ctx.fill();
+      
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.shadowBlur = 0;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  snapshot() {
+    const c = document.createElement("canvas");
+    c.width = 640;
+    c.height = Math.round(640 * this.video.videoHeight / (this.video.videoWidth || 640)) || 480;
+    c.getContext("2d").drawImage(this.video, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.7);
+  }
+
+  async giveFeedback() {
+    if (this.reps === this.lastFeedbackRep) return;
+    this.lastFeedbackRep = this.reps;
+    const stats = `peak joint angle ${Math.round(this.peakAngle)} degrees, personal range ${Math.round(this.minSeen)}-${Math.round(this.maxSeen)} degrees`;
+    const tip = await coachFeedback({
+      exerciseName: this.exercise.name,
+      reps: this.reps,
+      stats,
+      snapshotDataUrl: this.snapshot(),
+    });
+    this.hud.feedback.textContent = tip;
+    speak(tip);
+  }
+
+  async askCoach() {
+    this.hud.feedback.textContent = "Coach is looking…";
+    const stats = this.reps > 0
+      ? `peak joint angle ${Math.round(this.peakAngle)} degrees`
+      : "no reps completed yet";
+    const tip = await coachFeedback({
+      exerciseName: this.exercise.name,
+      reps: this.reps,
+      stats,
+      snapshotDataUrl: this.snapshot(),
+    });
+    this.hud.feedback.textContent = tip;
+    await speak(tip);
+  }
+
+  async endSession() {
+    const n = this.reps;
+    this.stop();
+    const coins = this.coinField.getSessionCoins();
+    
+    // Instead of logging and speaking immediately, trigger Pulse Check
+    window.dispatchEvent(new CustomEvent("show-pulse-check", {
+      detail: {
+        exerciseType: this.exercise.name,
+        targetReps: 10,
+        repsCompleted: n,
+        romEstimate: this.maxSeen > this.minSeen ? this.maxSeen - this.minSeen : 0,
+        durationSec: (performance.now() - this.sessionStart) / 1000,
+        coins: coins
+      }
+    }));
+    
+    this.resetSession();
+  }
+}

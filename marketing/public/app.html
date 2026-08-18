@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Happy Wheels — Your Companion</title>
+  <link rel="stylesheet" href="css/style.css?v=11" />
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+</head>
+<body>
+
+  <!-- Rotate-your-device overlay (portrait only) -->
+  <div id="rotate-overlay">
+    <div class="rotate-inner">
+      <div class="rotate-icon"><i data-lucide="smartphone"></i> <i data-lucide="rotate-cw"></i></div>
+      <p>Please rotate your device to landscape</p>
+    </div>
+  </div>
+
+  <!-- Boot screen: unlocks audio/TTS on iOS with a user gesture -->
+  <section id="screen-boot" class="screen active">
+    <canvas id="boot-face" class="face-canvas"></canvas>
+    <button id="btn-wake" class="big-cta">Tap to wake up Happy</button>
+  </section>
+
+  <!-- Stage (laptop) pairing modal: enter the phone's 4-letter code once -->
+  <div id="stage-code-modal" class="modal hidden">
+    <div class="modal-card code-card">
+      <h2><i data-lucide="monitor"></i> Big screen</h2>
+      <p class="hint">Enter the 4-letter code shown in Happy's <i data-lucide="settings"></i> settings on the phone</p>
+      <input id="room-input" class="room-input" maxlength="6" placeholder="CODE" autocomplete="off" autocapitalize="characters" />
+      <button id="btn-stage-go" class="pill-btn accent">Enter</button>
+    </div>
+  </div>
+
+  <!-- Home: full-screen face + minimal icon nav -->
+  <section id="screen-home" class="screen">
+    <canvas id="home-face" class="face-canvas"></canvas>
+    <nav id="home-nav" class="icon-nav">
+      <button class="mode-btn" data-mode="chat" title="Talk"><i data-lucide="message-square"></i></button>
+      <button class="mode-btn" data-mode="coach" title="Exercise"><i data-lucide="activity"></i></button>
+      <button class="mode-btn" data-mode="quest" title="AR Game"><i data-lucide="map"></i></button>
+      <button class="mode-btn" data-mode="progress" title="Progress"><i data-lucide="trending-up"></i></button>
+      <button class="mode-btn" data-mode="triage" title="Triage"><i data-lucide="stethoscope"></i></button>
+      <button class="mode-btn" data-mode="entertain" title="Fun"><i data-lucide="music"></i></button>
+    </nav>
+    <button id="btn-settings" class="icon-btn" title="Settings"><i data-lucide="settings"></i></button>
+  </section>
+
+  <!-- Chat: face + typed fallback -->
+  <section id="screen-chat" class="screen">
+    <canvas id="chat-face" class="face-canvas"></canvas>
+    <nav class="icon-nav">
+      <button id="btn-mic" class="mode-btn" title="Speak once"><i data-lucide="mic"></i></button>
+      <button id="btn-type" class="mode-btn" title="Type instead"><i data-lucide="keyboard"></i></button>
+    </nav>
+    <div id="type-bar" class="type-bar hidden">
+      <input id="type-input" type="text" placeholder="Type your message…" autocomplete="off" />
+      <button id="type-send"><i data-lucide="send"></i></button>
+    </div>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
+  </section>
+
+  <!-- Coach: camera + skeleton overlay + HUD -->
+  <section id="screen-coach" class="screen">
+    <video id="coach-video" playsinline muted></video>
+    <canvas id="coach-overlay"></canvas>
+    <div id="coach-hud">
+      <div id="coach-exercise-name">Arm Raises</div>
+      <div id="coach-status" class="coach-status wait">👀 Looking for you…</div>
+      <div id="coach-reps">0</div>
+      <div id="coach-bar"><div id="coach-bar-fill"></div></div>
+      <div id="coach-feedback">Loading pose model…</div>
+    </div>
+    <div class="coach-controls icon-nav">
+      <button id="btn-restart-coach" class="mode-btn" title="Restart Calibration"><i data-lucide="rotate-ccw"></i></button>
+      <button id="btn-switch-exercise" class="mode-btn wide-btn" title="Next exercise"><i data-lucide="arrow-right"></i> <span>Next Exercise</span></button>
+      <button id="btn-ask-coach" class="mode-btn" title="Ask coach"><i data-lucide="brain"></i></button>
+      <button id="btn-end-session" class="mode-btn" title="End session"><i data-lucide="x"></i></button>
+    </div>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
+  </section>
+
+  <!-- Entertain -->
+  <section id="screen-entertain" class="screen">
+    <canvas id="ent-face" class="face-canvas"></canvas>
+    <nav id="ent-nav" class="icon-nav">
+      <button class="ent-btn" data-ent="story" title="Story"><i data-lucide="book-open"></i></button>
+      <button class="ent-btn" data-ent="joke" title="Joke"><i data-lucide="smile"></i></button>
+      <button class="ent-btn" data-ent="riddle" title="Riddle"><i data-lucide="puzzle"></i></button>
+      <button class="ent-btn" data-ent="tune" title="Tune"><i data-lucide="headphones"></i></button>
+      <button class="ent-btn wide-btn" data-ent="piano" title="Happy Birthday"><i data-lucide="music"></i> <span>Happy Birthday (Song)</span></button>
+    </nav>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
+  </section>
+
+  <!-- Air Music: wave fingers in the air to play notes -->
+  <section id="screen-piano" class="screen">
+    <video id="piano-video" playsinline muted></video>
+    <canvas id="piano-overlay"></canvas>
+    <div id="piano-hint"><i data-lucide="music"></i> Wave your fingers in the air — higher hand, higher note!</div>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
+  </section>
+
+  <!-- Progress -->
+  <section id="screen-progress" class="screen">
+    <div class="progress-header">
+      <h2>Your Progress</h2>
+    </div>
+    <div class="progress-content">
+      <div id="progress-summary"></div>
+      <div class="heatmap-container" id="progress-heatmap"></div>
+      <div class="chart-container" id="progress-chart"></div>
+      <div class="export-actions">
+        <button id="btn-export-csv" class="pill-btn">Copy Data</button>
+      </div>
+    </div>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
+  </section>
+
+  <!-- Triage / Master Doctor -->
+  <section id="screen-triage" class="screen">
+    <div class="progress-header">
+      <h2><i data-lucide="stethoscope"></i> Clinical Triage</h2>
+    </div>
+    <div class="progress-content">
+      <div id="triage-feedback" class="triage-feedback">
+        Loading clinical analysis...
+      </div>
+      <div class="export-actions">
+        <button id="btn-export-clinical" class="pill-btn accent">Export Clinical Report</button>
+      </div>
+    </div>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
+  </section>
+
+  <!-- AR Quest / Hologram Game -->
+  <section id="screen-quest" class="screen">
+    <video id="ar-camera-feed" autoplay playsinline muted></video>
+    <div id="ar-scene-container">
+      <!-- We load A-Frame dynamically so it doesn't slow down boot, or we can use the tag at the bottom -->
+    </div>
+    <div class="hud-top" style="background: rgba(0,0,0,0.4); text-align: center; padding: 1rem; border-radius: 20px;">
+      <p id="ar-hud-text" style="font-size:1.2rem; color:var(--accent); font-weight: bold;">Find and tap the golden coin!</p>
+    </div>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
+  </section>
+
+  <!-- SOS Screen -->
+  <section id="screen-sos" class="screen">
+    <div class="sos-content">
+      <h1>EMERGENCY</h1>
+      <p id="sos-contact-info">Calling emergency contact...</p>
+      <button id="btn-sos-cancel" class="pill-btn danger">Press and hold to cancel</button>
+    </div>
+  </section>
+
+  <!-- Stage display (laptop / big screen mode, ?stage=1): shows the phone's
+       camera + overlay stream. Pure display — no camera or mic of its own. -->
+  <section id="screen-stage" class="screen">
+    <video id="stage-video" playsinline autoplay muted></video>
+    <div id="stage-hud" class="hidden">
+      <div id="stage-ex-name"></div>
+      <div id="stage-status-pill" class="coach-status wait"></div>
+      <div id="stage-reps">0</div>
+      <div id="stage-bar"><div id="stage-bar-fill"></div></div>
+      <div id="stage-feedback"></div>
+    </div>
+    <div class="stage-idle" id="stage-idle">
+      <div class="stage-emoji"><i data-lucide="bot"></i></div>
+      <p id="stage-status">Connecting to Happy…</p>
+      <p class="stage-sub">Exercises and music will appear on this screen</p>
+    </div>
+    <button id="btn-robot" class="icon-btn" title="Connect robot head (Bluetooth)"><i data-lucide="cpu"></i></button>
+  </section>
+
+  <!-- Global mic toggle (tap on = keeps listening, tap off = stops) -->
+  <button id="mic-toggle" class="hidden" title="Toggle microphone"><i data-lucide="mic"></i></button>
+  <!-- Shown on the phone when the big screen is genuinely linked -->
+  <div id="stage-dot" class="hidden" title="Big screen connected"><i data-lucide="monitor"></i></div>
+
+  <!-- Persistent SOS Button -->
+  <button id="sos-toggle" title="Press and hold for SOS"><i data-lucide="life-buoy"></i></button>
+
+  <!-- Pulse Check Overlay -->
+  <div id="pulse-overlay" class="modal hidden">
+    <div class="modal-card">
+      <h2>Interval Pulse Check</h2>
+      <p>How did that set feel?</p>
+      <label>Effort Level (1-10)
+        <input type="range" id="pulse-rpe" min="1" max="10" value="5" />
+        <div style="display:flex; justify-content:space-between;"><span>Easy</span><span>Max</span></div>
+      </label>
+      <div class="pulse-toggles">
+        <button id="btn-pain" class="pill-btn">Joint Pinch / Pain</button>
+        <button id="btn-spasm" class="pill-btn">Spasticity Flare</button>
+      </div>
+      <button id="btn-pulse-done" class="pill-btn accent" style="width:100%; margin-top:1rem;">Done</button>
+    </div>
+  </div>
+
+  <!-- Safety Countdown Overlay -->
+  <div id="safety-overlay" class="modal hidden" style="background: rgba(200, 0, 0, 0.8);">
+    <div class="sos-content">
+      <h1>Are you okay?</h1>
+      <p id="safety-countdown" style="font-size:4rem; font-weight:bold; margin: 1rem 0;">10</p>
+      <button id="btn-safety-cancel" class="pill-btn" style="padding: 1.5rem 3rem; font-size:1.5rem;">I am fine (Cancel)</button>
+    </div>
+  </div>
+
+  <!-- Settings modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Settings</h2>
+      <div class="code-row"><i data-lucide="monitor"></i> TV/Laptop Pairing Code: <b id="room-code">—</b></div>
+      <label>Your Name (for personalization)
+        <input type="text" id="user-name-input" placeholder="e.g. John" autocomplete="off" />
+      </label>
+      <label>Happy's voice
+        <div class="voice-row">
+          <select id="voice-select"></select>
+          <button id="btn-test-voice" class="pill-btn"><i data-lucide="play"></i> Try</button>
+        </div>
+      </label>
+      <label>Emergency Contact Number
+        <input type="tel" id="sos-number-input" placeholder="+91..." autocomplete="off" />
+      </label>
+      <button id="btn-close-settings" class="pill-btn">Close</button>
+      <p class="hint">Mount your phone to your wheelchair, then open this app on a TV or laptop and enter the code above to mirror the exercises!</p>
+      <p class="hint">Voice input needs Siri &amp; Dictation enabled on iPhone. Camera needs HTTPS.</p>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script type="module" src="js/app.js?v=17"></script>
+</body>
+</html>
