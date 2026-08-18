@@ -156,30 +156,8 @@ export class AirMusic {
               this.ripples.push({ x: nx * w, y: ny * h, color: TIP_COLORS[fi], t0: now });
             }
             f.x = nx; f.y = ny;
-            f.trail.push({ x: nx * w, y: ny * h });
-            if (f.trail.length > 7) f.trail.shift();
-
-            // magical glowing orb trail
-            for (let i = 1; i < f.trail.length; i++) {
-              const alpha = (i / f.trail.length);
-              
-              // glowing halo
-              ctx.fillStyle = TIP_COLORS[fi];
-              ctx.globalAlpha = alpha * 0.6;
-              ctx.beginPath();
-              ctx.arc(f.trail[i].x, f.trail[i].y, w * 0.015 * alpha, 0, Math.PI * 2);
-              ctx.fill();
-              
-              // inner bright core
-              ctx.fillStyle = "#fff";
-              ctx.globalAlpha = alpha * 0.9;
-              ctx.beginPath();
-              ctx.arc(f.trail[i].x, f.trail[i].y, w * 0.005 * alpha, 0, Math.PI * 2);
-              ctx.fill();
-            }
-            ctx.globalAlpha = 1;
-
-            // fingertip dot
+            // Removed expensive glowing trail to fix severe mobile latency
+            // Just draw the crisp fingertip dot!
             ctx.beginPath();
             ctx.arc(nx * w, ny * h, Math.max(6, w * 0.008), 0, Math.PI * 2);
             ctx.fillStyle = TIP_COLORS[fi];

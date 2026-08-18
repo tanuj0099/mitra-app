@@ -29,11 +29,7 @@ function setupScene() {
         <a-light type="point" color="#FFD700" intensity="0.5" distance="1"></a-light>
       </a-entity>
       
-      <!-- Central Zen Sapling -->
-      <a-entity id="ar-sapling" position="0 -0.5 -4" scale="1 1 1">
-        <a-cylinder color="#3a2f2a" height="0.1" radius="1.2" position="0 0 0"></a-cylinder>
-        <a-cone id="sapling-plant" color="#4F7A5B" radius-bottom="0.2" height="0.5" position="0 0.3 0"></a-cone>
-      </a-entity>
+      <!-- Central Zen Sapling Removed -->
     </a-scene>
   `;
   sceneInitialized = true;
@@ -172,13 +168,7 @@ async function collectCoin() {
     plusOne.setAttribute("animation", `property: position; to: ${textPos.x} 2.5 ${textPos.z}; dur: 1500; easing: easeOutQuad`);
     document.querySelector("a-scene").appendChild(plusOne);
     
-    // Grow sapling
-    const sapling = document.getElementById("sapling-plant");
-    if (sapling) {
-       const curScale = sapling.getAttribute("scale") || {x:1, y:1, z:1};
-       const newScale = `${curScale.x * 1.1} ${curScale.y * 1.2} ${curScale.z * 1.1}`;
-       sapling.setAttribute("animation__grow", `property: scale; to: ${newScale}; dur: 1000; easing: easeOutElastic`);
-    }
+    // (Sapling growth removed)
     
     speak("Coin collected! Excellent reach.");
     

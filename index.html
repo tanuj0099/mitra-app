@@ -143,7 +143,7 @@
       <!-- We load A-Frame dynamically so it doesn't slow down boot, or we can use the tag at the bottom -->
     </div>
     <div class="hud-top" style="background: rgba(0,0,0,0.4); text-align: center; padding: 1rem; border-radius: 20px;">
-      <p style="font-size:1.2rem; color:var(--accent); font-weight: bold;">Follow the arrow to find the Happy Badge!</p>
+      <p id="ar-hud-text" style="font-size:1.2rem; color:var(--accent); font-weight: bold;">Find and tap the golden coin!</p>
     </div>
     <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
   </section>
@@ -235,6 +235,6 @@
 
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script type="module" src="js/app.js?v=16"></script>
+  <script type="module" src="js/app.js?v=17"></script>
 </body>
 </html>

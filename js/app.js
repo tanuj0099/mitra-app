@@ -5,13 +5,13 @@ import { RobotFace } from "./face.js";
 import { initSpeech, unlockAudio, speak, stopSpeaking, listenOnce, hasRecognition, listVoices, setVoice, setSpeakProxy } from "./speech.js";
 import { chatReply, coachFeedback, getStory, getJoke, getRiddle, checkBackendStatus, hasBackendKey } from "./claude.js";
 import { Coach } from "./coach.js";
-import { AirMusic, NOTE_FREQS, synthNote } from "./piano.js?v=2";
+import { AirMusic, NOTE_FREQS, synthNote } from "./piano.js?v=3";
 import { VoiceLoop } from "./voice.js";
 import { initFaceSync, initStageSync } from "./sync.js";
 import { PersonTracker } from "./tracker.js";
 import { seedDemoIfEmpty, logSession, logSOSEvent, getHeatmapData, getRomTrend, buildWeeklySpeech, exportCSV, exportPlainText, buildClinicalSummary, getEntries } from "./tracking.js";
 import { RobotLink, hasBluetooth } from "./robot.js";
-import { startARGame, stopARGame } from "./ar-game.js?v=2";
+import { startARGame, stopARGame } from "./ar-game.js?v=3";
 
 const $ = (id) => document.getElementById(id);
 
