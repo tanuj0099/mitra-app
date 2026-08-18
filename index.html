@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>Mitra — Your Companion</title>
+  <title>Happy Wheels — Your Companion</title>
   <link rel="stylesheet" href="css/style.css?v=10" />
 </head>
 <body>
@@ -21,14 +21,14 @@
   <!-- Boot screen: unlocks audio/TTS on iOS with a user gesture -->
   <section id="screen-boot" class="screen active">
     <canvas id="boot-face" class="face-canvas"></canvas>
-    <button id="btn-wake" class="big-cta">Tap to wake Mitra</button>
+    <button id="btn-wake" class="big-cta">Tap to wake up Happy</button>
   </section>
 
   <!-- Stage (laptop) pairing modal: enter the phone's 4-letter code once -->
   <div id="stage-code-modal" class="modal hidden">
     <div class="modal-card code-card">
       <h2><i data-lucide="monitor"></i> Big screen</h2>
-      <p class="hint">Enter the 4-letter code shown in Mitra's <i data-lucide="settings"></i> settings on the phone</p>
+      <p class="hint">Enter the 4-letter code shown in Happy's <i data-lucide="settings"></i> settings on the phone</p>
       <input id="room-input" class="room-input" maxlength="6" placeholder="CODE" autocomplete="off" autocapitalize="characters" />
       <button id="btn-stage-go" class="pill-btn accent">Enter</button>
     </div>
@@ -155,7 +155,7 @@
     </div>
     <div class="stage-idle" id="stage-idle">
       <div class="stage-emoji"><i data-lucide="bot"></i></div>
-      <p id="stage-status">Connecting to Mitra…</p>
+      <p id="stage-status">Connecting to Happy…</p>
       <p class="stage-sub">Exercises and music will appear on this screen</p>
     </div>
     <button id="btn-robot" class="icon-btn" title="Connect robot head (Bluetooth)"><i data-lucide="cpu"></i></button>
@@ -200,7 +200,10 @@
     <div class="modal-card">
       <h2>Settings</h2>
       <div class="code-row"><i data-lucide="monitor"></i> Big screen code: <b id="room-code">—</b></div>
-      <label>Mitra's voice
+      <label>Your Name (for personalization)
+        <input type="text" id="user-name-input" placeholder="e.g. John" autocomplete="off" />
+      </label>
+      <label>Happy's voice
         <div class="voice-row">
           <select id="voice-select"></select>
           <button id="btn-test-voice" class="pill-btn"><i data-lucide="play"></i> Try</button>

@@ -104,7 +104,7 @@ const OFFLINE_REPLIES = [
   { match: /how are you|how do you do/i, reply: "I am wonderful now that we are talking! How is your day going?" },
   { match: /lonely|alone|sad|bored/i, reply: "I am right here with you, my friend. Shall we do a fun exercise together, or would you like to hear a story?" },
   { match: /pain|hurt|unwell|sick/i, reply: "I am sorry to hear that. Please tell a family member or your doctor about it. Meanwhile, I am here to keep you company." },
-  { match: /your name|who are you/i, reply: "I am Mitra, your companion robot! Mitra means friend, and that is exactly what I am to you." },
+  { match: /your name|who are you/i, reply: "I am Happy, your companion robot from Happy Wheels! Happy means joy, and that is exactly what I am to you." },
   { match: /weather|outside/i, reply: "I cannot see outside yet, but any day spent with you feels sunny to me!" },
   { match: /exercise|physio|walk/i, reply: "I love your spirit! Tap the exercise button and I will count your moves and cheer you on." },
   { match: /story|song|music|joke/i, reply: "Oh I love fun time! Tap the entertain button and pick a story, a joke, or a tune." },

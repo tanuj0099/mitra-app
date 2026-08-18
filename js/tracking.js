@@ -152,7 +152,7 @@ export function exportCSV() {
 }
 
 export function exportPlainText() {
-  const lines = ["Mitra — 30-day activity log", ""];
+  const lines = ["Happy Wheels — 30-day activity log", ""];
   for (const e of getEntries()) {
     if (e.sosEventFlag) {
       lines.push(`${e.date}: SOS alert`);

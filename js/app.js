@@ -210,7 +210,7 @@ async function handleUtterance(raw) {
 
   // Global intents
   if (has(/\b(i am fine|im fine|i'm fine|cancel alarm|stop alarm|im okay|i am okay)\b/)) { cancelSafety(); return; }
-  if (has(/\b(mitra help|sos|i need help|help me)\b/)) { triggerSOS(); return; }
+  if (has(/\b(hey happy|happy help|sos|i need help|help me)\b/)) { triggerSOS(); return; }
   if (has(/piano|keyboard|air music|play.*fingers|fingers.*play|make.*music/)) { await beginPiano(); return; }
   if (has(/exercis|workout|work out|physio|stretch|fitness|training/)) { await beginCoach(); return; }
   if (has(/stor(y|ies)|kahani/)) { show("entertain"); await doEnt("story"); return; }
@@ -263,13 +263,13 @@ function startSync() {
         if (d.ev === "hello") {
           clearTimeout(helloTimer);
           $("stage-status").textContent = d.v === APP_V
-            ? "✅ Connected to Mitra — talk to the robot!"
+            ? "✅ Connected to Happy — talk to the robot!"
             : "⚠️ Version mismatch — hard refresh BOTH devices (Cmd+Shift+R / close and reopen the tab)";
         } else if (d.ev === "mode") {
           if (d.mode === "home") stageShowIdle();
           else {
             $("stage-hud").classList.toggle("hidden", d.mode !== "coach");
-            if (!$("stage-video").srcObject) $("stage-status").textContent = "🎥 Starting video from Mitra…";
+            if (!$("stage-video").srcObject) $("stage-status").textContent = "🎥 Starting video from Happy…";
           }
         } else if (d.ev === "hud") {
           $("stage-ex-name").textContent = d.name || "";
@@ -301,20 +301,20 @@ function startSync() {
         if (s === "connected") {
           // Don't trust the link until the phone's version handshake arrives —
           // we may have reached a stale "ghost" session still holding the id.
-          $("stage-status").textContent = "🔗 Linked — verifying it's really your Mitra…";
+          $("stage-status").textContent = "🔗 Linked — verifying it's really your Happy…";
           clearTimeout(helloTimer);
           helloTimer = setTimeout(() => {
             $("stage-status").textContent =
-              "⚠️ Reached a stale Mitra session — retrying automatically. Make sure the phone shows its code in ⚙️ settings and it matches.";
+              "⚠️ Reached a stale session — retrying automatically. Make sure the phone shows its code in ⚙️ settings and it matches.";
             setTimeout(() => { if (sync) sync.retryNow(); }, 4000);
           }, 3000);
           return;
         }
         clearTimeout(helloTimer);
         $("stage-status").textContent =
-          s === "connecting" ? "Connecting to Mitra… (open the app on the phone too)"
-          : s === "disconnected" ? "Lost Mitra — reconnecting…"
-          : `Waiting for Mitra… (${s})`;
+          s === "connecting" ? "Connecting to Happy… (open the app on the phone too)"
+          : s === "disconnected" ? "Lost Happy — reconnecting…"
+          : `Waiting for Happy… (${s})`;
       },
     });
   } else {
@@ -374,9 +374,12 @@ $("btn-wake").addEventListener("click", async () => {
   show("home");
   faces.home.setState("happy");
   $("mic-toggle").classList.remove("hidden");
+  const name = localStorage.getItem("happy_user_name");
+  if (name && name.trim().length > 0) speak(`Welcome back, ${name}!`);
+  else speak("Welcome back! I am here.");
   const greeting = hasRecognition
-    ? "Hello my friend! Tap the mic button, then just talk to me."
-    : "Hello my friend! Tap a button and let us begin.";
+    ? "Tap the mic button, then just talk to me."
+    : "Tap a button and let us begin.";
   setCaption(greeting);
   await speak(greeting);
   setTimeout(() => { if (currentScreen === "home") setCaption(""); }, 4000);
@@ -699,7 +702,7 @@ $("voice-select").addEventListener("change", (e) => {
 });
 $("btn-test-voice").addEventListener("click", () => {
   setVoice($("voice-select").value);
-  speak("Hello my friend! I am Mitra. Do you like this voice?");
+  speak("Hello my friend! I am Happy. Do you like this voice?");
 });
 
 $("btn-settings").addEventListener("click", () => {
@@ -893,6 +896,15 @@ sosCancelBtn.addEventListener("mousedown", handleCancelDown);
 sosCancelBtn.addEventListener("touchend", handleCancelUp);
 sosCancelBtn.addEventListener("mouseup", handleCancelUp);
 sosCancelBtn.addEventListener("mouseleave", handleCancelUp);
+
+// Settings for Personalization
+const userNameInput = $("user-name-input");
+if (userNameInput) {
+  userNameInput.value = localStorage.getItem("happy_user_name") || "";
+  userNameInput.addEventListener("input", (e) => {
+    localStorage.setItem("happy_user_name", e.target.value);
+  });
+}
 
 // Settings for SOS
 const sosNumberInput = $("sos-number-input");
