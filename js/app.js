@@ -11,6 +11,7 @@ import { initFaceSync, initStageSync } from "./sync.js";
 import { PersonTracker } from "./tracker.js";
 import { seedDemoIfEmpty, logSOSEvent, getHeatmapData, getRomTrend, buildWeeklySpeech, exportCSV, exportPlainText, buildClinicalSummary } from "./tracking.js";
 import { RobotLink, hasBluetooth } from "./robot.js";
+import { startARGame, stopARGame } from "./ar-game.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -54,7 +55,7 @@ let activeFace = faces.boot;
 faces.boot.start();
 
 // ---------- Screen navigation ----------
-const screens = ["boot", "home", "chat", "coach", "entertain", "piano", "stage", "progress", "sos", "triage"];
+const screens = ["boot", "home", "chat", "coach", "entertain", "piano", "stage", "progress", "sos", "triage", "quest"];
 let currentScreen = "boot";
 
 const captions = { home: "home-caption", chat: "chat-caption", entertain: "ent-caption" };
@@ -213,6 +214,7 @@ async function handleUtterance(raw) {
   if (has(/\b(hey happy|happy help|sos|i need help|help me)\b/)) { triggerSOS(); return; }
   if (has(/piano|keyboard|air music|play.*fingers|fingers.*play|make.*music/)) { await beginPiano(); return; }
   if (has(/exercis|workout|work out|physio|stretch|fitness|training/)) { await beginCoach(); return; }
+  if (has(/ar game|hologram|pokemon|badge|quest/)) { await beginQuest(); return; }
   if (has(/stor(y|ies)|kahani/)) { show("entertain"); await doEnt("story"); return; }
   if (has(/joke|laugh|funny/)) { show("entertain"); await doEnt("joke"); return; }
   if (has(/riddle|puzzle/)) { show("entertain"); await doEnt("riddle"); return; }
@@ -392,6 +394,11 @@ document.querySelectorAll("[data-mode]").forEach(btn =>
     if (mode === "coach") { beginCoach(); return; }
     if (mode === "progress") { await showProgress(); return; }
     if (mode === "triage") { await showTriage(); return; }
+    if (mode === "quest") { beginQuest(); return; }
+    if (currentScreen === "coach") { activeCoach.stop(); activeCoach = null; }
+    if (currentScreen === "chat") stopSpeaking();
+    if (currentScreen === "quest") stopARGame();
+    if (currentScreen === "entertain") stopSpeaking();
     show(mode);
     if (mode === "chat") startChat();
     if (mode === "entertain") speak("Pick one — story, joke, riddle, or music!");
@@ -784,6 +791,16 @@ async function showProgress() {
 
 $("btn-export-csv").addEventListener("click", () => {
   navigator.clipboard.writeText(exportCSV()).then(() => speak("Data copied to clipboard"));
+});
+
+// ---------- AR Game ----------
+async function beginQuest() {
+  show("quest");
+  await startARGame();
+}
+
+window.addEventListener("ar-game-done", async () => {
+  await goHome("That was fun! Do you want to play again or do something else?");
 });
 
 // ---------- Triage ----------

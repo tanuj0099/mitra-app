@@ -178,7 +178,20 @@ export function buildClinicalSummary() {
     totalReps += (e.repsCompleted || 0);
   }
   
-  let html = `<h3>Summary (30 Days)</h3>
+  let html = `
+    <div class="stat-card">
+      <div class="val">${daysActive} / 30</div>
+      <div class="lbl">Days Active</div>
+    </div>
+    <div class="stat-card">
+      <div class="val" style="color:var(--danger)">${sosEvents}</div>
+      <div class="lbl">SOS Alerts</div>
+    </div>
+    <div class="stat-card">
+      <div class="val" style="color:var(--accent)">${localStorage.getItem("happy_ar_badges") || 0}</div>
+      <div class="lbl">AR Badges <i data-lucide="medal"></i></div>
+    </div>
+    <h3>Summary (30 Days)</h3>
     <ul>
       <li>Total Repetitions: ${totalReps}</li>
       <li>Joint Pain Events: ${painCount}</li>

@@ -40,6 +40,7 @@
     <nav id="home-nav" class="icon-nav">
       <button class="mode-btn" data-mode="chat" title="Talk"><i data-lucide="message-square"></i></button>
       <button class="mode-btn" data-mode="coach" title="Exercise"><i data-lucide="activity"></i></button>
+      <button class="mode-btn" data-mode="quest" title="AR Game"><i data-lucide="map"></i></button>
       <button class="mode-btn" data-mode="progress" title="Progress"><i data-lucide="trending-up"></i></button>
       <button class="mode-btn" data-mode="triage" title="Triage"><i data-lucide="stethoscope"></i></button>
       <button class="mode-btn" data-mode="entertain" title="Fun"><i data-lucide="music"></i></button>
@@ -129,6 +130,19 @@
       <div class="export-actions">
         <button id="btn-export-clinical" class="pill-btn accent">Export Clinical Report</button>
       </div>
+    </div>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
+  </section>
+
+  <!-- AR Quest / Hologram Game -->
+  <section id="screen-quest" class="screen">
+    <video id="ar-camera-feed" autoplay playsinline muted></video>
+    <div id="ar-scene-container">
+      <!-- We load A-Frame dynamically so it doesn't slow down boot, or we can use the tag at the bottom -->
+    </div>
+    <div class="hud-top" style="background: rgba(0,0,0,0.7);">
+      <h2>Distance: <span id="ar-distance">8.0</span>m</h2>
+      <p style="font-size:1.2rem; color:var(--accent);">Push your wheelchair forward!</p>
     </div>
     <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
   </section>
@@ -228,6 +242,7 @@
 
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script type="module" src="js/app.js?v=12"></script>
 </body>
 </html>

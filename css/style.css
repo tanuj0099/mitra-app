@@ -722,6 +722,21 @@ html, body {
 .triage-feedback h3 { margin-top: 1rem; color: #ffb454; }
 .triage-feedback ul { margin: 1rem 0; padding-left: 2rem; }
 
+/* AR Quest / Hologram Game */
+#ar-camera-feed {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  object-fit: cover;
+  z-index: -2;
+}
+#ar-scene-container {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: -1;
+}
+
 /* SVG Icon Sizing */
 .lucide {
   width: 1em;
