@@ -6,7 +6,7 @@ export function Header() {
     <header className="w-full flex items-center justify-between px-6 py-4 border-b border-line/30 bg-paper">
       <Link href="/" className="flex items-center gap-3 no-underline group focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand rounded-sm">
         <BlinkingEyes className="w-8 h-8" />
-        <span className="font-mono tracking-tight text-xl text-ink font-medium">Mitra</span>
+        <span className="font-mono tracking-tight text-xl text-ink font-medium">Happy Wheels</span>
       </Link>
       
       <nav className="flex items-center gap-8">

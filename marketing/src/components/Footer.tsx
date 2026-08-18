@@ -9,7 +9,7 @@ export function Footer() {
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3 text-ink/60">
             <BlinkingEyes className="w-6 h-6" animate={false} />
-            <span className="font-mono text-sm tracking-tight">Mitra</span>
+            <span className="font-mono text-sm tracking-tight">Happy Wheels</span>
           </div>
           <p className="text-ink/70 text-sm max-w-sm">
             Incubated at Cambridge Innovation Center (CIC) to bring accessible care to everyone.

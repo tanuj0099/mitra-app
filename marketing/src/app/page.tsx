@@ -3,6 +3,7 @@ import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { BlinkingEyes } from "../components/BlinkingEyes";
 import { IconCompanion, IconCoach, IconSOS } from "../components/Icons";
+import { StatsCarousel } from "../components/StatsCarousel";
 
 export default function Home() {
   return (
@@ -81,8 +82,9 @@ export default function Home() {
                   If the system detects extended inactivity during a session, or hears distress words, it automatically begins a multi-tiered safety escalation to emergency contacts.
                 </p>
               </div>
-
             </div>
+            
+            <StatsCarousel />
           </div>
         </section>
 
