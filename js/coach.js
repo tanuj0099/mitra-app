@@ -115,7 +115,7 @@ export class Coach {
     this.coinField = new CoinField();
     this.sessionStart = performance.now();
     this.lastMovementTime = performance.now();
-    this.lastAngle = 0;
+    this.lastMovementAngle = 0;
     this.safetyTier = 0;
     this.resetSession();
   }
@@ -281,10 +281,10 @@ export class Coach {
     this.maxSeen = Math.max(this.maxSeen, angle);
     
     // Inactivity / Fall detection
-    if (Math.abs(angle - this.lastAngle) > 2) {
+    if (Math.abs(angle - this.lastMovementAngle) > 10) {
       this.lastMovementTime = performance.now();
+      this.lastMovementAngle = angle;
     }
-    this.lastAngle = angle;
     
     if (performance.now() - this.lastMovementTime > 20000 && this.safetyTier === 0) {
       this.safetyTier = 1;

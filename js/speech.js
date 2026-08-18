@@ -13,10 +13,13 @@ const RATE = 0.92;
 
 function rankVoice(v) {
   let score = 0;
-  if (/en[-_]IN/i.test(v.lang)) score += 4;              // Indian English first
-  if (/enhanced|premium|natural/i.test(v.name)) score += 3;
-  if (/Veena|Samantha|Karen|Moira|Tessa/i.test(v.name)) score += 2;
-  if (v.lang.startsWith("en")) score += 1;
+  if (/Google UK English Female/i.test(v.name)) score += 10;
+  if (/Google US English/i.test(v.name)) score += 9;
+  if (/Samantha|Ava|Allison|Susan/i.test(v.name)) score += 8;
+  if (/Zira|Mark|Aria/i.test(v.name)) score += 7;
+  if (/premium|enhanced|natural/i.test(v.name)) score += 5;
+  if (/en[-_]IN/i.test(v.lang)) score += 1; // Demote basic Indian English robotic voices
+  if (v.lang.startsWith("en")) score += 2;
   return score;
 }
 
@@ -74,8 +77,18 @@ export function speak(text) {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     if (voice) u.voice = voice;
+    
+    // Dynamic Modulation
     u.rate = RATE;
     u.pitch = PITCH;
+    if (text.includes("?")) {
+      u.pitch = PITCH + 0.15; // Raised pitch for questions
+    }
+    if (text.includes("!")) {
+      u.rate = RATE + 0.1; // Faster rate for excitement
+      u.pitch = PITCH + 0.05;
+    }
+    
     u.onstart = () => onSpeakStateChange(true);
     let settled = false;
     const done = () => {

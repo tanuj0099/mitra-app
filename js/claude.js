@@ -107,10 +107,31 @@ export async function coachFeedback({ exerciseName, reps, stats, snapshotDataUrl
     }], { maxTokens: 120 });
     if (ai) return ai;
   }
-  // Offline: rule-based encouragement
-  if (reps === 0) return "Let us begin! Sit comfortably and move slowly. I am watching and counting.";
-  if (reps < 5) return `${reps} done, wonderful start! Keep your back straight and breathe out as you lift.`;
-  return `${reps} repetitions, you are a champion! Slow and steady movements work the muscles best.`;
+  // Offline: Randomized rule-based encouragement
+  if (reps === 0) {
+    const starts = [
+      "Let us begin! Sit comfortably and move slowly. I am watching and counting.",
+      "Ready when you are! Take a deep breath.",
+      "Let's start! I'm tracking your movements."
+    ];
+    return starts[Math.floor(Math.random() * starts.length)];
+  }
+  
+  if (reps < 5) {
+    const mids = [
+      `${reps} done, wonderful start! Keep your back straight and breathe out as you lift.`,
+      `That's ${reps}. Excellent form! Keep going slowly.`,
+      `${reps} reps. You are doing great! Stay focused on your breathing.`
+    ];
+    return mids[Math.floor(Math.random() * mids.length)];
+  }
+  
+  const ends = [
+    `${reps} repetitions, you are a champion! Slow and steady movements work the muscles best.`,
+    `Wow, ${reps} reps! You're stronger every day! Keep it up.`,
+    `That's ${reps}! Fantastic effort. Remember, consistency is key to recovery!`
+  ];
+  return ends[Math.floor(Math.random() * ends.length)];
 }
 
 // ---------- Entertainment ----------
