@@ -40,7 +40,20 @@ export default async function handler(req, res) {
 
   const MODELS = ['llama-3.2-11b-vision-preview', 'llama-3.1-8b-instant'];
   
-  for (const model of MODELS) {
+  for (let i = 0; i < MODELS.length; i++) {
+    const model = MODELS[i];
+    
+    let currentMessages = formattedMessages;
+    if (model === 'llama-3.1-8b-instant') {
+      currentMessages = formattedMessages.map(msg => {
+        if (Array.isArray(msg.content)) {
+          const textOnly = msg.content.filter(c => c.type === 'text').map(c => c.text).join(" ");
+          return { ...msg, content: textOnly };
+        }
+        return msg;
+      });
+    }
+
     try {
       const apiRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
@@ -48,18 +61,20 @@ export default async function handler(req, res) {
           "Authorization": `Bearer ${key}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ model, max_tokens: maxTokens || 250, messages: formattedMessages }),
+        body: JSON.stringify({ model, max_tokens: maxTokens || 250, messages: currentMessages }),
       });
       
-      if (apiRes.status === 404) continue;
       if (!apiRes.ok) {
-        return res.status(apiRes.status).json({ error: 'Groq Error' });
+        console.error("Groq Error for", model, await apiRes.text());
+        if (i === MODELS.length - 1) return res.status(apiRes.status).json({ error: 'Groq Error' });
+        continue;
       }
       
       const data = await apiRes.json();
       return res.status(200).json({ reply: data.choices[0].message.content.trim() });
     } catch (err) {
       console.error(err);
+      if (i === MODELS.length - 1) return res.status(500).json({ error: 'Network Error' });
     }
   }
   
