@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node -e \"const fs=require('fs'); fs.cpSync('../css', 'public/css', {recursive:true}); fs.cpSync('../js', 'public/js', {recursive:true}); fs.copyFileSync('../index.html', 'public/app.html');\" && next build",
     "start": "next start",
     "lint": "eslint"
   },

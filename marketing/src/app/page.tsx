@@ -24,7 +24,7 @@ export default function Home() {
               A companion that listens, a coach that guides, and a safety net that never sleeps. 
             </p>
             <Link 
-              href="/sign-up" 
+              href="/app.html" 
               className="bg-brand text-paper px-10 py-4 rounded-full font-medium text-lg transition-transform hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand"
             >
               Try Happy Wheels
@@ -153,7 +153,7 @@ export default function Home() {
               Ready to meet Happy?
             </h2>
             <Link 
-              href="/sign-up" 
+              href="/app.html" 
               className="bg-paper text-brand px-12 py-5 rounded-full font-medium text-xl transition-transform hover:scale-105 active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-paper shadow-xl"
             >
               Try Happy Wheels
