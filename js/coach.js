@@ -5,7 +5,7 @@
 // recorded or uploaded.
 
 import { speak } from "./speech.js";
-import { coachFeedback } from "./claude.js";
+import { coachFeedback } from "./ai.js";
 import { logSession } from "./tracking.js";
 import { CoinField } from "./collect.js";
 
