@@ -23,29 +23,46 @@ function saveLog(log) {
   return pruned;
 }
 
-/** Seed a few demo days so Progress isn't empty on stage. */
+/** Seed a rich demo log (20+ days of data) so Progress and Triage screens look fully fleshed out for the prototype presentation. */
 export function seedDemoIfEmpty() {
   const log = loadLog();
   if (log.length > 0) return;
-  const exercises = ["Arm Raises", "Elbow Curls", "Overhead Reach", "Side Bends"];
+  const exercises = ["Seated Shoulder Press", "Seated Rows", "Trunk Rotations", "Lateral Raises", "Seated Chest Press"];
   const seeded = [];
-  for (let d = 6; d >= 1; d--) {
+  
+  // Seed past 30 days
+  for (let d = 28; d >= 1; d--) {
     const dt = new Date();
     dt.setDate(dt.getDate() - d);
     const date = dt.toISOString().slice(0, 10);
-    if (d % 2 === 0) {
+    
+    // User does exercises roughly 4 days a week
+    if (d % 7 !== 0 && d % 7 !== 3) {
+      // 2 exercises per active day
+      for (let i=0; i<2; i++) {
+        seeded.push({
+          date,
+          exerciseType: exercises[(d + i) % exercises.length],
+          targetReps: 12,
+          repsCompleted: 10 + Math.floor(Math.random() * 3),
+          romEstimate: 60 + Math.floor(Math.random() * 20),
+          formScore: 80 + Math.floor(Math.random() * 15),
+          durationSec: 120 + Math.floor(Math.random() * 60),
+          sosEventFlag: false,
+          rpe: 5 + Math.floor(Math.random() * 3), // mostly 5-7 effort
+          pain: d === 12 || d === 5, // A couple of pain flares
+          spasm: d === 18,
+        });
+      }
+    }
+    
+    // Seed an SOS event just for the triage demo
+    if (d === 15) {
       seeded.push({
         date,
-        exerciseType: exercises[d % exercises.length],
-        targetReps: 10,
-        repsCompleted: 6 + (d % 4),
-        romEstimate: 38 + d * 3,
-        formScore: null,
-        durationSec: 180 + d * 20,
-        sosEventFlag: false,
-        rpe: 4 + (d % 3),
-        pain: false,
-        spasm: d === 3,
+        exerciseType: "SOS",
+        targetReps: 0, repsCompleted: 0, romEstimate: 0, formScore: null, durationSec: 0,
+        sosEventFlag: true
       });
     }
   }
@@ -169,14 +186,22 @@ export function buildClinicalSummary() {
   let spasmCount = 0;
   let highRpeCount = 0;
   let totalReps = 0;
+  let activeDates = new Set();
+  let sosEvents = 0;
   
   for (const e of entries) {
-    if (e.sosEventFlag) continue;
+    if (e.date) activeDates.add(e.date.split("T")[0]);
+    if (e.sosEventFlag) {
+      sosEvents++;
+      continue;
+    }
     if (e.pain) painCount++;
     if (e.spasm) spasmCount++;
     if (e.rpe > 7) highRpeCount++;
     totalReps += (e.repsCompleted || 0);
   }
+  
+  const daysActive = activeDates.size;
   
   let html = `
     <div class="stat-card">

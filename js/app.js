@@ -9,7 +9,7 @@ import { AirMusic, NOTE_FREQS, synthNote } from "./piano.js";
 import { VoiceLoop } from "./voice.js";
 import { initFaceSync, initStageSync } from "./sync.js";
 import { PersonTracker } from "./tracker.js";
-import { seedDemoIfEmpty, logSession, logSOSEvent, getHeatmapData, getRomTrend, buildWeeklySpeech, exportCSV, exportPlainText, buildClinicalSummary } from "./tracking.js";
+import { seedDemoIfEmpty, logSession, logSOSEvent, getHeatmapData, getRomTrend, buildWeeklySpeech, exportCSV, exportPlainText, buildClinicalSummary, getEntries } from "./tracking.js";
 import { RobotLink, hasBluetooth } from "./robot.js";
 import { startARGame, stopARGame } from "./ar-game.js";
 
@@ -593,13 +593,13 @@ async function startCoach() {
 }
 
 $("btn-restart-coach").addEventListener("click", () => {
-  if (activeCoach) {
-    activeCoach.resetSession();
+  if (coach) {
+    coach.resetSession();
     speak("Calibration restarted. Let's try again.");
   }
 });
 $("btn-switch-exercise").addEventListener("click", () => {
-  if (activeCoach) activeCoach.switchExercise();
+  if (coach) coach.switchExercise();
 });
 $("btn-ask-coach").addEventListener("click", () => coach.askCoach());
 $("btn-end-session").addEventListener("click", async () => {
