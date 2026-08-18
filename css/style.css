@@ -77,14 +77,15 @@ html, body {
   font-size: 1.05rem;
   margin-bottom: 1rem;
   padding: 0.6rem 0.9rem;
-  background: rgba(55, 224, 255, 0.1);
-  border: 1px solid rgba(55, 224, 255, 0.35);
+  background: rgba(47, 93, 90, 0.1);
+  border: 1px solid var(--accent);
   border-radius: 0.7rem;
+  color: var(--text);
 }
 .code-row b {
   font-size: 1.4rem;
   letter-spacing: 0.35rem;
-  color: var(--eye);
+  color: var(--accent);
   margin-left: 0.3rem;
 }
 
@@ -570,21 +571,24 @@ html, body {
   z-index: 50;
 }
 .modal-card {
-  background: #121a30;
-  border: 1px solid rgba(255,255,255,0.15);
+  background: var(--bg);
+  border: 1px solid var(--accent);
   border-radius: 1rem;
   padding: 1.4rem;
   width: min(90%, 460px);
+  color: var(--text);
 }
-.modal-card h2 { margin-bottom: 1rem; }
-.modal-card label { display: block; font-size: 0.95rem; margin-bottom: 0.8rem; }
+.modal-card h2 { margin-bottom: 1rem; color: var(--accent); }
+.modal-card label { display: block; font-size: 0.95rem; margin-bottom: 0.8rem; color: var(--text); font-weight: 500; }
 .modal-card input {
   width: 100%;
   margin-top: 0.4rem;
   padding: 0.7rem;
   border-radius: 0.5rem;
-  border: none;
+  border: 1px solid rgba(0,0,0,0.15);
   font-size: 1rem;
+  background: #fff;
+  color: var(--text);
 }
 .voice-row {
   display: flex;
@@ -595,9 +599,11 @@ html, body {
   flex: 1;
   padding: 0.6rem;
   border-radius: 0.5rem;
-  border: none;
+  border: 1px solid rgba(0,0,0,0.15);
   font-size: 0.95rem;
   min-width: 0;
+  background: #fff;
+  color: var(--text);
 }
 .api-status { font-size: 0.9rem; margin-bottom: 1rem; color: var(--accent); }
 .api-status.ok { color: #7dffa0; }
