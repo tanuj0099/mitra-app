@@ -1,19 +1,19 @@
-// Claude API wrapper with a full offline fallback so the demo never breaks.
-// With an API key saved in settings, chat/coach/entertainment use real Claude;
-// without one, scripted responses keep every mode working.
+// AI logic using a secure Vercel Serverless Function backend.
+// In Offline mode (no API key in Vercel), it falls back to rule-based responses.
 
-const KEY_STORAGE = "mitra_api_key";
-const CLAUDE_MODELS = ["claude-sonnet-5", "claude-sonnet-4-5", "claude-3-5-haiku-latest"];
-const OPENAI_MODELS = ["gpt-4o", "gpt-4o-mini"];
-let workingModel = null;
+export let hasBackendKey = false;
 
-export function getApiKey() { return localStorage.getItem(KEY_STORAGE) || ""; }
-export function setApiKey(k) {
-  if (k) localStorage.setItem(KEY_STORAGE, k.trim());
-  else localStorage.removeItem(KEY_STORAGE);
-  workingModel = null;
+export async function checkBackendStatus() {
+  try {
+    const res = await fetch("/api/status");
+    if (!res.ok) return false;
+    const data = await res.json();
+    hasBackendKey = data.hasKey === true;
+    return hasBackendKey;
+  } catch (err) {
+    return false;
+  }
 }
-export function hasApiKey() { return !!getApiKey(); }
 
 const PERSONA = `You are the Adaptive Wellness & Safety Assistant Engine integrated into an accessible wheelchair fitness platform.
 Your primary purpose is to manage core systems: dynamic routine adjustment, multi-tiered safety check-ins, and an expert adaptive clinical triage copilot ("Master Doctor").
@@ -24,76 +24,21 @@ Rules:
 - Provide expert-level adaptive guidance and evidence-based triage for mild/moderate issues (like spasticity spikes or shoulder impingement).`;
 
 async function callAI(messages, { system = PERSONA, maxTokens = 250 } = {}) {
-  const key = getApiKey();
-  if (!key) return null;
+  if (!hasBackendKey) return null;
   
-  const isAnthropic = key.startsWith("sk-ant-");
-  
-  if (isAnthropic) {
-    const models = workingModel ? [workingModel] : CLAUDE_MODELS;
-    for (const model of models) {
-      try {
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "x-api-key": key,
-            "anthropic-version": "2023-06-01",
-            "anthropic-dangerous-direct-browser-access": "true",
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({ model, max_tokens: maxTokens, system, messages }),
-        });
-        if (res.status === 404) continue;
-        if (!res.ok) return null;
-        const data = await res.json();
-        workingModel = model;
-        return data.content?.map(b => b.text || "").join(" ").trim() || null;
-      } catch { return null; }
-    }
-  } else {
-    // OpenAI Logic
-    const models = workingModel ? [workingModel] : OPENAI_MODELS;
-    // Format messages for OpenAI
-    const formattedMessages = [{ role: "system", content: system }];
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ system, messages, maxTokens }),
+    });
     
-    for (const msg of messages) {
-      if (Array.isArray(msg.content)) {
-        // Handle images
-        const content = [];
-        for (const item of msg.content) {
-          if (item.type === "text") content.push({ type: "text", text: item.text });
-          if (item.type === "image") content.push({ type: "image_url", image_url: { url: `data:${item.source.media_type};base64,${item.source.data}` } });
-        }
-        formattedMessages.push({ role: msg.role, content });
-      } else {
-        formattedMessages.push({ role: msg.role, content: msg.content });
-      }
-    }
-    
-    for (const model of models) {
-      try {
-        const res = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${key}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ model, max_tokens: maxTokens, messages: formattedMessages }),
-        });
-        if (res.status === 404) continue;
-        if (!res.ok) return null;
-        const data = await res.json();
-        workingModel = model;
-        return data.choices[0].message.content.trim();
-      } catch { return null; }
-    }
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.reply || null;
+  } catch (err) {
+    return null;
   }
-  return null;
-}
-
-export async function testApiKey() {
-  const reply = await callAI([{ role: "user", content: "Say OK" }], { maxTokens: 10 });
-  return reply !== null;
 }
 
 // ---------- Chat ----------
@@ -137,7 +82,7 @@ export async function chatReply(userText) {
 // ---------- Coach feedback (vision when key present) ----------
 
 export async function coachFeedback({ exerciseName, reps, stats, snapshotDataUrl }) {
-  if (hasApiKey() && snapshotDataUrl) {
+  if (hasBackendKey && snapshotDataUrl) {
     const base64 = snapshotDataUrl.split(",")[1];
     const ai = await callAI([{
       role: "user",

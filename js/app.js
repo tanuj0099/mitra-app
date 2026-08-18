@@ -55,7 +55,7 @@ let activeFace = faces.boot;
 faces.boot.start();
 
 // ---------- Screen navigation ----------
-const screens = ["boot", "home", "chat", "coach", "entertain", "piano", "stage", "progress", "sos", "triage", "quest"];
+const screens = ["boot", "home", "chat", "coach", "entertain", "piano", "stage", "progress", "sos", "triage", "quest", "settings"];
 let currentScreen = "boot";
 
 const captions = { home: "home-caption", chat: "chat-caption", entertain: "ent-caption" };
@@ -372,6 +372,9 @@ $("btn-wake").addEventListener("click", async () => {
   if ("wakeLock" in navigator) {
     try { await navigator.wakeLock.request("screen"); } catch {}
   }
+  checkBackendStatus().then(hasKey => {
+    console.log("Backend AI Key Configured:", hasKey);
+  });
   woken = true;
   show("home");
   faces.home.setState("happy");
@@ -674,17 +677,6 @@ async function playTune() {
 
 // ---------- Settings ----------
 const modal = $("settings-modal");
-const statusEl = $("api-status");
-
-function refreshApiStatus() {
-  if (hasApiKey()) {
-    statusEl.textContent = "API key saved — AI mode";
-    statusEl.className = "api-status ok";
-  } else {
-    statusEl.textContent = "Offline mode — scripted responses";
-    statusEl.className = "api-status";
-  }
-}
 
 function refreshVoiceList() {
   const sel = $("voice-select");
@@ -713,34 +705,10 @@ $("btn-test-voice").addEventListener("click", () => {
 });
 
 $("btn-settings").addEventListener("click", () => {
-  $("api-key-input").value = getApiKey();
+  show("settings");
   $("room-code").textContent = ROOM || "";
-  refreshApiStatus();
   refreshVoiceList();
-  modal.classList.remove("hidden");
 });
-$("btn-close-settings").addEventListener("click", () => modal.classList.add("hidden"));
-$("btn-clear-key").addEventListener("click", () => {
-  setApiKey("");
-  $("api-key-input").value = "";
-  refreshApiStatus();
-});
-$("btn-test-key").addEventListener("click", async () => {
-  setApiKey($("api-key-input").value);
-  if (!hasApiKey()) { refreshApiStatus(); return; }
-  statusEl.textContent = "Testing key…";
-  statusEl.className = "api-status";
-  const ok = await testApiKey();
-  if (ok) {
-    statusEl.textContent = "Key works! Real AI enabled ✓";
-    statusEl.className = "api-status ok";
-  } else {
-    statusEl.textContent = "Key failed — check the key and internet, staying in offline mode";
-    statusEl.className = "api-status err";
-  }
-});
-
-refreshApiStatus();
 
 // ---------- Progress ----------
 async function showProgress() {
