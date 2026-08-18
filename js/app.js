@@ -9,7 +9,7 @@ import { AirMusic, NOTE_FREQS, synthNote } from "./piano.js";
 import { VoiceLoop } from "./voice.js";
 import { initFaceSync, initStageSync } from "./sync.js";
 import { PersonTracker } from "./tracker.js";
-import { seedDemoIfEmpty, logSOSEvent, getHeatmapData, getRomTrend, buildWeeklySpeech, exportCSV, exportPlainText, buildClinicalSummary } from "./tracking.js";
+import { seedDemoIfEmpty, logSession, logSOSEvent, getHeatmapData, getRomTrend, buildWeeklySpeech, exportCSV, exportPlainText, buildClinicalSummary } from "./tracking.js";
 import { RobotLink, hasBluetooth } from "./robot.js";
 import { startARGame, stopARGame } from "./ar-game.js";
 
@@ -55,7 +55,7 @@ let activeFace = faces.boot;
 faces.boot.start();
 
 // ---------- Screen navigation ----------
-const screens = ["boot", "home", "chat", "coach", "entertain", "piano", "stage", "progress", "sos", "triage", "quest", "settings"];
+const screens = ["boot", "home", "chat", "coach", "entertain", "piano", "stage", "progress", "sos", "triage", "quest"];
 let currentScreen = "boot";
 
 const captions = { home: "home-caption", chat: "chat-caption", entertain: "ent-caption" };
