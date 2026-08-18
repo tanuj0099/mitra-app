@@ -41,6 +41,7 @@
       <button class="mode-btn" data-mode="chat" title="Talk"><i data-lucide="message-square"></i></button>
       <button class="mode-btn" data-mode="coach" title="Exercise"><i data-lucide="activity"></i></button>
       <button class="mode-btn" data-mode="progress" title="Progress"><i data-lucide="trending-up"></i></button>
+      <button class="mode-btn" data-mode="triage" title="Triage"><i data-lucide="stethoscope"></i></button>
       <button class="mode-btn" data-mode="entertain" title="Fun"><i data-lucide="music"></i></button>
     </nav>
     <button id="btn-settings" class="icon-btn" title="Settings"><i data-lucide="settings"></i></button>
@@ -116,6 +117,22 @@
     <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
   </section>
 
+  <!-- Triage / Master Doctor -->
+  <section id="screen-triage" class="screen">
+    <div class="progress-header">
+      <h2><i data-lucide="stethoscope"></i> Clinical Triage</h2>
+    </div>
+    <div class="progress-content">
+      <div id="triage-feedback" class="triage-feedback">
+        Loading clinical analysis...
+      </div>
+      <div class="export-actions">
+        <button id="btn-export-clinical" class="pill-btn accent">Export Clinical Report</button>
+      </div>
+    </div>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
+  </section>
+
   <!-- SOS Screen -->
   <section id="screen-sos" class="screen">
     <div class="sos-content">
@@ -152,6 +169,32 @@
   <!-- Persistent SOS Button -->
   <button id="sos-toggle" title="Press and hold for SOS"><i data-lucide="life-buoy"></i></button>
 
+  <!-- Pulse Check Overlay -->
+  <div id="pulse-overlay" class="modal hidden">
+    <div class="modal-card">
+      <h2>Interval Pulse Check</h2>
+      <p>How did that set feel?</p>
+      <label>Effort Level (1-10)
+        <input type="range" id="pulse-rpe" min="1" max="10" value="5" />
+        <div style="display:flex; justify-content:space-between;"><span>Easy</span><span>Max</span></div>
+      </label>
+      <div class="pulse-toggles">
+        <button id="btn-pain" class="pill-btn">Joint Pinch / Pain</button>
+        <button id="btn-spasm" class="pill-btn">Spasticity Flare</button>
+      </div>
+      <button id="btn-pulse-done" class="pill-btn accent" style="width:100%; margin-top:1rem;">Done</button>
+    </div>
+  </div>
+
+  <!-- Safety Countdown Overlay -->
+  <div id="safety-overlay" class="modal hidden" style="background: rgba(200, 0, 0, 0.8);">
+    <div class="sos-content">
+      <h1>Are you okay?</h1>
+      <p id="safety-countdown" style="font-size:4rem; font-weight:bold; margin: 1rem 0;">10</p>
+      <button id="btn-safety-cancel" class="pill-btn" style="padding: 1.5rem 3rem; font-size:1.5rem;">I am fine (Cancel)</button>
+    </div>
+  </div>
+
   <!-- Settings modal -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-card">
@@ -164,7 +207,7 @@
         </div>
       </label>
       <label>Claude API key (optional — enables real AI)
-        <input id="api-key-input" type="password" placeholder="sk-ant-…" autocomplete="off" />
+        <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off" />
       </label>
       <div id="api-status" class="api-status">Offline mode — scripted responses</div>
       <label>Emergency Contact Number

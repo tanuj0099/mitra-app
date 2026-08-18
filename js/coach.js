@@ -114,6 +114,9 @@ export class Coach {
     this.lastHintAt = 0;
     this.coinField = new CoinField();
     this.sessionStart = performance.now();
+    this.lastMovementTime = performance.now();
+    this.lastAngle = 0;
+    this.safetyTier = 0;
     this.resetSession();
   }
 
@@ -135,6 +138,8 @@ export class Coach {
     this.lastFeedbackRep = 0;
     if (this.coinField) this.coinField.resetSession();
     this.sessionStart = performance.now();
+    this.lastMovementTime = performance.now();
+    this.safetyTier = 0;
   }
 
   get exercise() { return EXERCISES[this.exerciseIdx]; }
@@ -271,8 +276,21 @@ export class Coach {
     const raw = this.exercise.metric(lm);
     this.smoothAngle = this.smoothAngle === null ? raw : this.smoothAngle * 0.7 + raw * 0.3;
     const angle = this.smoothAngle;
+    
     this.minSeen = Math.min(this.minSeen, angle);
     this.maxSeen = Math.max(this.maxSeen, angle);
+    
+    // Inactivity / Fall detection
+    if (Math.abs(angle - this.lastAngle) > 2) {
+      this.lastMovementTime = performance.now();
+    }
+    this.lastAngle = angle;
+    
+    if (performance.now() - this.lastMovementTime > 20000 && this.safetyTier === 0) {
+      this.safetyTier = 1;
+      this.stop();
+      window.dispatchEvent(new CustomEvent("safety-check-tier1"));
+    }
     const range = this.maxSeen - this.minSeen;
 
     if (this.state === "calibrating") {
@@ -426,21 +444,19 @@ export class Coach {
     const n = this.reps;
     this.stop();
     const coins = this.coinField.getSessionCoins();
-    const msg = n > 0
-      ? `Fantastic! ${n} repetitions${coins > 0 ? ` and ${coins} coins` : ""} — I am proud of you!`
-      : "Okay, whenever you are ready.";
-      
-    if (n > 0 || coins > 0) {
-      logSession({
+    
+    // Instead of logging and speaking immediately, trigger Pulse Check
+    window.dispatchEvent(new CustomEvent("show-pulse-check", {
+      detail: {
         exerciseType: this.exercise.name,
         targetReps: 10,
-        repsCompleted: this.reps,
+        repsCompleted: n,
         romEstimate: this.maxSeen > this.minSeen ? this.maxSeen - this.minSeen : 0,
-        durationSec: (performance.now() - this.sessionStart) / 1000
-      });
-    }
-
-    await speak(msg);
+        durationSec: (performance.now() - this.sessionStart) / 1000,
+        coins: coins
+      }
+    }));
+    
     this.resetSession();
   }
 }

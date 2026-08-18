@@ -43,13 +43,16 @@ export function seedDemoIfEmpty() {
         formScore: null,
         durationSec: 180 + d * 20,
         sosEventFlag: false,
+        rpe: 4 + (d % 3),
+        pain: false,
+        spasm: d === 3,
       });
     }
   }
   saveLog(seeded);
 }
 
-export function logSession({ exerciseType, repsCompleted, romEstimate, formScore, durationSec, targetReps = 10 }) {
+export function logSession({ exerciseType, repsCompleted, romEstimate, formScore, durationSec, targetReps = 10, rpe = 5, pain = false, spasm = false }) {
   const log = loadLog();
   log.push({
     date: todayISO(),
@@ -60,6 +63,9 @@ export function logSession({ exerciseType, repsCompleted, romEstimate, formScore
     formScore: formScore ?? null,
     durationSec: Math.round(durationSec || 0),
     sosEventFlag: false,
+    rpe,
+    pain,
+    spasm
   });
   return saveLog(log);
 }
@@ -134,11 +140,12 @@ export function buildWeeklySpeech() {
 }
 
 export function exportCSV() {
-  const rows = [["date", "exerciseType", "targetReps", "repsCompleted", "romEstimate", "formScore", "durationSec", "sosEvent"]];
+  const rows = [["date", "exerciseType", "targetReps", "repsCompleted", "romEstimate", "formScore", "durationSec", "sosEvent", "rpe", "pain", "spasm"]];
   for (const e of getEntries()) {
     rows.push([
       e.date, e.exerciseType, e.targetReps, e.repsCompleted,
       e.romEstimate, e.formScore ?? "", e.durationSec, e.sosEventFlag ? "yes" : "no",
+      e.rpe ?? "", e.pain ? "yes" : "no", e.spasm ? "yes" : "no"
     ]);
   }
   return rows.map(r => r.join(",")).join("\n");
@@ -150,8 +157,43 @@ export function exportPlainText() {
     if (e.sosEventFlag) {
       lines.push(`${e.date}: SOS alert`);
     } else {
-      lines.push(`${e.date}: ${e.exerciseType} — ${e.repsCompleted} reps, ROM ~${e.romEstimate}°, ${e.durationSec}s`);
+      lines.push(`${e.date}: ${e.exerciseType} — ${e.repsCompleted} reps, ROM ~${e.romEstimate}°, ${e.durationSec}s, RPE ${e.rpe || "-"}, Pain: ${e.pain ? "Yes" : "No"}, Spasm: ${e.spasm ? "Yes" : "No"}`);
     }
   }
   return lines.join("\n");
+}
+
+export function buildClinicalSummary() {
+  const entries = getEntries();
+  let painCount = 0;
+  let spasmCount = 0;
+  let highRpeCount = 0;
+  let totalReps = 0;
+  
+  for (const e of entries) {
+    if (e.sosEventFlag) continue;
+    if (e.pain) painCount++;
+    if (e.spasm) spasmCount++;
+    if (e.rpe > 7) highRpeCount++;
+    totalReps += (e.repsCompleted || 0);
+  }
+  
+  let html = `<h3>Summary (30 Days)</h3>
+    <ul>
+      <li>Total Repetitions: ${totalReps}</li>
+      <li>Joint Pain Events: ${painCount}</li>
+      <li>Spasticity Flares: ${spasmCount}</li>
+      <li>High Effort (RPE > 7) Sessions: ${highRpeCount}</li>
+    </ul>
+    <h3>Master Doctor Recommendation</h3>`;
+    
+  if (painCount > 3) {
+    html += `<p><strong>Moderate Severity Detected:</strong> You have reported recurring joint pain/pinching. I recommend de-loading the affected muscle groups. Replace heavy pushing exercises with gentle scapular decompressions and seated stretches.</p>`;
+  } else if (spasmCount > 0) {
+    html += `<p><strong>Low Severity Detected:</strong> Mild spasticity flares noted. I will prescribe targeted seated stretches and safe recovery protocols. Ensure you rest adequately between sets.</p>`;
+  } else {
+    html += `<p><strong>All Clear:</strong> You are responding well to the current load. Keep up the great work and maintain your prescribed routine!</p>`;
+  }
+  
+  return html;
 }

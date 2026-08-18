@@ -9,7 +9,7 @@ import { AirMusic, NOTE_FREQS, synthNote } from "./piano.js";
 import { VoiceLoop } from "./voice.js";
 import { initFaceSync, initStageSync } from "./sync.js";
 import { PersonTracker } from "./tracker.js";
-import { seedDemoIfEmpty, logSOSEvent, getHeatmapData, getRomTrend, buildWeeklySpeech, exportCSV, exportPlainText } from "./tracking.js";
+import { seedDemoIfEmpty, logSOSEvent, getHeatmapData, getRomTrend, buildWeeklySpeech, exportCSV, exportPlainText, buildClinicalSummary } from "./tracking.js";
 import { RobotLink, hasBluetooth } from "./robot.js";
 
 const $ = (id) => document.getElementById(id);
@@ -54,7 +54,7 @@ let activeFace = faces.boot;
 faces.boot.start();
 
 // ---------- Screen navigation ----------
-const screens = ["boot", "home", "chat", "coach", "entertain", "piano", "stage", "progress", "sos"];
+const screens = ["boot", "home", "chat", "coach", "entertain", "piano", "stage", "progress", "sos", "triage"];
 let currentScreen = "boot";
 
 const captions = { home: "home-caption", chat: "chat-caption", entertain: "ent-caption" };
@@ -209,6 +209,7 @@ async function handleUtterance(raw) {
   }
 
   // Global intents
+  if (has(/\b(i am fine|im fine|i'm fine|cancel alarm|stop alarm|im okay|i am okay)\b/)) { cancelSafety(); return; }
   if (has(/\b(mitra help|sos|i need help|help me)\b/)) { triggerSOS(); return; }
   if (has(/piano|keyboard|air music|play.*fingers|fingers.*play|make.*music/)) { await beginPiano(); return; }
   if (has(/exercis|workout|work out|physio|stretch|fitness|training/)) { await beginCoach(); return; }
@@ -387,6 +388,7 @@ document.querySelectorAll("[data-mode]").forEach(btn =>
     const mode = btn.dataset.mode;
     if (mode === "coach") { beginCoach(); return; }
     if (mode === "progress") { await showProgress(); return; }
+    if (mode === "triage") { await showTriage(); return; }
     show(mode);
     if (mode === "chat") startChat();
     if (mode === "entertain") speak("Pick one — story, joke, riddle, or music!");
@@ -781,6 +783,28 @@ $("btn-export-csv").addEventListener("click", () => {
   navigator.clipboard.writeText(exportCSV()).then(() => speak("Data copied to clipboard"));
 });
 
+// ---------- Triage ----------
+async function showTriage() {
+  seedDemoIfEmpty();
+  show("triage");
+  
+  const summaryHtml = buildClinicalSummary();
+  $("triage-feedback").innerHTML = summaryHtml;
+  
+  // Basic speech summary of the triage
+  if (summaryHtml.includes("Moderate Severity")) {
+    await speak("I have detected recurring joint pain. I recommend replacing heavy pushing with gentle stretches.");
+  } else if (summaryHtml.includes("Low Severity")) {
+    await speak("I noted mild spasticity flares. We should focus on safe recovery protocols.");
+  } else {
+    await speak("Your clinical log is clear. Keep up the great work!");
+  }
+}
+
+$("btn-export-clinical").addEventListener("click", () => {
+  navigator.clipboard.writeText(exportPlainText()).then(() => speak("Clinical report copied to clipboard"));
+});
+
 // ---------- SOS Feature ----------
 let sosTimer = null;
 let sosInterval = null;
@@ -883,3 +907,115 @@ if (sosNumberInput) {
 if (window.lucide) {
   lucide.createIcons();
 }
+
+// ---------- Safety Monitoring & SOS Escalation ----------
+let safetyState = "ok"; // ok, tier1, tier2
+let safetyTimeout = null;
+let countdownInterval = null;
+let countdownValue = 10;
+
+window.addEventListener("safety-check-tier1", async () => {
+  safetyState = "tier1";
+  speak("Are you okay? Say 'I am fine' or tap the screen.");
+  
+  // Wait 15s for response
+  safetyTimeout = setTimeout(() => {
+    if (safetyState === "tier1") {
+      triggerTier2();
+    }
+  }, 15000);
+});
+
+function triggerTier2() {
+  safetyState = "tier2";
+  $("safety-overlay").classList.remove("hidden");
+  countdownValue = 10;
+  $("safety-countdown").textContent = countdownValue;
+  speak("Ten. Nine. Eight."); // Shortened voice to not block
+  
+  countdownInterval = setInterval(() => {
+    countdownValue--;
+    $("safety-countdown").textContent = countdownValue;
+    if (countdownValue <= 0) {
+      clearInterval(countdownInterval);
+      if (safetyState === "tier2") {
+        $("safety-overlay").classList.add("hidden");
+        triggerSOS(); // Escalates to Tier 3
+      }
+    }
+  }, 1000);
+}
+
+function cancelSafety() {
+  if (safetyState !== "ok") {
+    safetyState = "ok";
+    clearTimeout(safetyTimeout);
+    clearInterval(countdownInterval);
+    $("safety-overlay").classList.add("hidden");
+    speak("Okay, returning to your session.");
+    if (activeCoach) {
+      activeCoach.lastMovementTime = performance.now();
+      activeCoach.safetyTier = 0;
+      activeCoach.start();
+    }
+  }
+}
+
+$("btn-safety-cancel").addEventListener("click", cancelSafety);
+// Add global voice intent for safety cancel
+// Update handleUtterance with "i am fine", "cancel alarm"
+
+// ---------- Interval Pulse Check ----------
+let pendingSessionData = null;
+let painFlag = false;
+let spasmFlag = false;
+
+window.addEventListener("show-pulse-check", (e) => {
+  pendingSessionData = e.detail;
+  painFlag = false;
+  spasmFlag = false;
+  $("btn-pain").style.background = "";
+  $("btn-spasm").style.background = "";
+  $("pulse-rpe").value = 5;
+  $("pulse-overlay").classList.remove("hidden");
+  speak("How did that set feel?");
+});
+
+$("btn-pain").addEventListener("click", () => {
+  painFlag = !painFlag;
+  $("btn-pain").style.background = painFlag ? "rgba(255,107,107,0.5)" : "";
+});
+$("btn-spasm").addEventListener("click", () => {
+  spasmFlag = !spasmFlag;
+  $("btn-spasm").style.background = spasmFlag ? "rgba(255,180,84,0.5)" : "";
+});
+
+$("btn-pulse-done").addEventListener("click", async () => {
+  $("pulse-overlay").classList.add("hidden");
+  
+  if (pendingSessionData) {
+    const rpe = parseInt($("pulse-rpe").value, 10);
+    
+    // Log the session with the new wellness metrics
+    logSession({
+      ...pendingSessionData,
+      rpe: rpe,
+      pain: painFlag,
+      spasm: spasmFlag
+    });
+    
+    let msg = `Fantastic! ${pendingSessionData.repsCompleted} repetitions — I am proud of you!`;
+    
+    // Dynamic Adjustment Logic
+    if (painFlag) {
+      msg = "I noted the discomfort. I am reducing the range of motion for your next exercises to keep your joints safe.";
+    } else if (rpe > 8) {
+      msg = "That looked like hard work! Take an extra 30 seconds of rest before we continue.";
+    } else if (spasmFlag) {
+      msg = "Noted the spasticity flare. We will take it slow.";
+    }
+    
+    await speak(msg);
+    pendingSessionData = null;
+  }
+});

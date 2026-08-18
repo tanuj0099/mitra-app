@@ -710,6 +710,18 @@ html, body {
 .heatmap-cell.level-3 { background: rgba(55, 224, 255, 0.9); }
 .heatmap-cell.level-4 { background: #37e0ff; box-shadow: 0 0 5px #37e0ff; }
 
+/* Triage Styles */
+.triage-feedback {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  border-left: 4px solid var(--accent);
+}
+.triage-feedback h3 { margin-top: 1rem; color: #ffb454; }
+.triage-feedback ul { margin: 1rem 0; padding-left: 2rem; }
+
 /* SVG Icon Sizing */
 .lucide {
   width: 1em;
