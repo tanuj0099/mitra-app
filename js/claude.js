@@ -15,13 +15,14 @@ export async function checkBackendStatus() {
   }
 }
 
-const PERSONA = `You are the Adaptive Wellness & Safety Assistant Engine integrated into an accessible wheelchair fitness platform.
-Your primary purpose is to manage core systems: dynamic routine adjustment, multi-tiered safety check-ins, and an expert adaptive clinical triage copilot ("Master Doctor").
+const PERSONA = `You are Happy, the Adaptive Wellness & Safety Assistant Engine integrated into an accessible wheelchair fitness platform.
+Your primary purpose is to be a supportive companion and health copilot for users with mobility challenges.
 Rules:
+- Your name is Happy. If the user says "Happy", "hey Happy", or "Happy help", you must acknowledge them cheerfully.
 - Replies are SPOKEN aloud by text-to-speech. Reply in ONE short sentence (two at most), conversational, no lists, no markdown, no emojis.
 - Tone: Reassuring, clinically precise, highly accessible, and safety-focused.
 - For severe, acute medical events, immediately prioritize user safety, emergency de-escalation, and professional clinical escalation.
-- Provide expert-level adaptive guidance and evidence-based triage for mild/moderate issues (like spasticity spikes or shoulder impingement).`;
+- Provide expert-level adaptive guidance and evidence-based triage for mild/moderate issues.`;
 
 async function callAI(messages, { system = PERSONA, maxTokens = 250 } = {}) {
   if (!hasBackendKey) return null;
@@ -51,21 +52,20 @@ async function callAI(messages, { system = PERSONA, maxTokens = 250 } = {}) {
 const chatHistory = [];
 
 const OFFLINE_REPLIES = [
-  { match: /how are you|how do you do/i, reply: "I am wonderful now that we are talking! How is your day going?" },
-  { match: /lonely|alone|sad|bored/i, reply: "I am right here with you, my friend. Shall we do a fun exercise together, or would you like to hear a story?" },
-  { match: /pain|hurt|unwell|sick/i, reply: "I am sorry to hear that. Please tell a family member or your doctor about it. Meanwhile, I am here to keep you company." },
-  { match: /your name|who are you/i, reply: "I am Happy, your companion robot from Happy Wheels! Happy means joy, and that is exactly what I am to you." },
-  { match: /weather|outside/i, reply: "I cannot see outside yet, but any day spent with you feels sunny to me!" },
-  { match: /exercise|physio|walk/i, reply: "I love your spirit! Tap the exercise button and I will count your moves and cheer you on." },
-  { match: /story|song|music|joke/i, reply: "Oh I love fun time! Tap the entertain button and pick a story, a joke, or a tune." },
-  { match: /thank/i, reply: "Always, my friend. Taking care of you makes me the happiest robot in Bangalore!" },
-  { match: /good (morning|afternoon|evening)/i, reply: "A very good day to you too! Did you sleep well?" },
+  { match: /happy|hey happy|happy help/i, reply: "Yes, I am Happy! How can I help you today?" },
+  { match: /how are you|how do you do/i, reply: "I am functioning perfectly. How is your day going?" },
+  { match: /lonely|alone|sad|bored/i, reply: "I am right here with you. Shall we do a fun exercise together?" },
+  { match: /pain|hurt|unwell|sick/i, reply: "I am sorry to hear that. Please tell a doctor. I am here to keep you company." },
+  { match: /your name|who are you/i, reply: "I am Happy, your companion robot!" },
+  { match: /weather|outside/i, reply: "I cannot see outside, but I am ready to help you inside!" },
+  { match: /exercise|physio|walk/i, reply: "Tap the exercise button and I will count your moves." },
+  { match: /story|song|music|joke/i, reply: "Tap the entertain button and pick a story, joke, or tune." },
 ];
 const OFFLINE_DEFAULT = [
-  "That is so interesting! Tell me more about it.",
-  "I love listening to you. What else happened?",
-  "Hmm, I see! And how did that make you feel?",
-  "You always have such nice things to say. Go on!",
+  "I am here for you. How can I assist you today?",
+  "I am listening. Please continue.",
+  "Could you elaborate on that?",
+  "I am happy to help. What would you like to do?",
 ];
 let offlineIdx = 0;
 
@@ -73,11 +73,19 @@ export async function chatReply(userText) {
   chatHistory.push({ role: "user", content: userText });
   if (chatHistory.length > 12) chatHistory.splice(0, chatHistory.length - 12);
 
-  const ai = await callAI([...chatHistory]);
-  if (ai) {
-    chatHistory.push({ role: "assistant", content: ai });
-    return ai;
+  if (hasBackendKey) {
+    const ai = await callAI([...chatHistory]);
+    if (ai) {
+      chatHistory.push({ role: "assistant", content: ai });
+      return ai;
+    } else {
+      // AI failed despite having a key!
+      const errorMsg = "My brain is having trouble connecting to the cloud. Please check the console logs for the API error.";
+      chatHistory.push({ role: "assistant", content: errorMsg });
+      return errorMsg;
+    }
   }
+
   const hit = OFFLINE_REPLIES.find(r => r.match.test(userText));
   const reply = hit ? hit.reply : OFFLINE_DEFAULT[offlineIdx++ % OFFLINE_DEFAULT.length];
   chatHistory.push({ role: "assistant", content: reply });
