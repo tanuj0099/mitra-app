@@ -13,10 +13,16 @@ function setupScene() {
   const container = document.getElementById("ar-scene-container");
   container.innerHTML = `
     <a-scene embedded vr-mode-ui="enabled: false" background="transparent: true">
-      <a-camera position="0 1.6 0" look-controls="magicWindowTrackingEnabled: true" wasd-controls="enabled: false"></a-camera>
+      <a-camera position="0 1.6 0" look-controls="magicWindowTrackingEnabled: true" wasd-controls="enabled: false">
+        <!-- HUD Compass pointing to coin -->
+        <a-entity id="hud-compass" position="0 -0.5 -1">
+          <a-cone color="red" radius-bottom="0.05" height="0.2" rotation="-90 0 0"></a-cone>
+          <a-text value="Follow!" color="white" align="center" width="1.5" position="0 -0.15 0"></a-text>
+        </a-entity>
+      </a-camera>
       
       <!-- Hologram Coin / Badge -->
-      <a-entity id="ar-coin" position="0 1.5 -${MAX_DISTANCE}" scale="0.5 0.5 0.5" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000">
+      <a-entity id="ar-coin" position="0 1.5 -8" scale="0.5 0.5 0.5" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000">
         <a-cylinder color="gold" height="0.1" radius="1" rotation="90 0 0"></a-cylinder>
         <a-text value="Happy" color="black" align="center" width="6" position="0 0 0.06"></a-text>
         <a-text value="Badge" color="black" align="center" width="4" position="0 -0.5 0.06"></a-text>
@@ -26,35 +32,77 @@ function setupScene() {
   sceneInitialized = true;
 }
 
+function spawnCoin() {
+  const cameraEl = document.querySelector("a-camera");
+  const coin = document.getElementById("ar-coin");
+  if (!cameraEl || !coin || !cameraEl.object3D) return;
+
+  const cam3D = cameraEl.object3D;
+  const direction = new THREE.Vector3();
+  cam3D.getWorldDirection(direction);
+  
+  const camPos = new THREE.Vector3();
+  cam3D.getWorldPosition(camPos);
+  
+  const targetPos = camPos.clone().add(direction.multiplyScalar(MAX_DISTANCE));
+  
+  coin.setAttribute("position", `${targetPos.x} 1.5 ${targetPos.z}`);
+  coin.setAttribute("scale", "0.5 0.5 0.5");
+  coin.setAttribute("visible", "true");
+  
+  currentDistance = MAX_DISTANCE;
+  stepCount = 0;
+}
+
+function compassLoop() {
+  if (!isPlaying) return;
+  const coin = document.getElementById("ar-coin");
+  const compass = document.getElementById("hud-compass");
+  
+  if (coin && compass && coin.object3D && compass.object3D) {
+    const coinPos = new THREE.Vector3();
+    coin.object3D.getWorldPosition(coinPos);
+    compass.object3D.lookAt(coinPos);
+  }
+  
+  requestAnimationFrame(compassLoop);
+}
+
 function handleMotion(e) {
   if (!isPlaying) return;
   
-  // Basic pedometer/wheelchair push detection
   const accel = e.accelerationIncludingGravity || e.acceleration;
   if (!accel) return;
   
-  // Looking for spikes in acceleration (wheelchair push or physical step)
   const y = accel.y;
   const delta = Math.abs(y - lastAccelY);
   lastAccelY = y;
   
-  // If spike > 1.5, we count it as a "push"
   if (delta > 1.5) {
     stepCount++;
-    // Move the coin closer by 0.5m every 3 pushes
     if (stepCount >= 3) {
       stepCount = 0;
       currentDistance = Math.max(0, currentDistance - 0.5);
       
       const coin = document.getElementById("ar-coin");
-      if (coin) {
-        coin.setAttribute("position", `0 1.5 -${currentDistance}`);
-        // Scale it up as it gets closer
+      const cameraEl = document.querySelector("a-camera");
+      
+      if (coin && cameraEl && cameraEl.object3D) {
+        const camPos = new THREE.Vector3();
+        cameraEl.object3D.getWorldPosition(camPos);
+        
+        const coinPos = new THREE.Vector3();
+        coin.object3D.getWorldPosition(coinPos);
+        
+        // Move coin closer along the vector between camera and current coin position
+        const dir = new THREE.Vector3().subVectors(coinPos, camPos).normalize();
+        const newPos = camPos.clone().add(dir.multiplyScalar(currentDistance));
+        
+        coin.setAttribute("position", `${newPos.x} 1.5 ${newPos.z}`);
+        
         const scale = 0.5 + ((MAX_DISTANCE - currentDistance) * 0.1);
         coin.setAttribute("scale", `${scale} ${scale} ${scale}`);
       }
-      
-      document.getElementById("ar-distance").textContent = currentDistance.toFixed(1);
       
       if (currentDistance <= 0) {
         collectCoin();
@@ -66,7 +114,6 @@ function handleMotion(e) {
 async function collectCoin() {
   isPlaying = false;
   
-  // Visual explosion/hide
   const coin = document.getElementById("ar-coin");
   if (coin) {
     coin.setAttribute("animation", "property: scale; to: 5 5 5; dur: 500");
@@ -75,51 +122,49 @@ async function collectCoin() {
     }, 500);
   }
   
-  // Log badge locally
   let badges = parseInt(localStorage.getItem("happy_ar_badges") || "0", 10);
   badges++;
   localStorage.setItem("happy_ar_badges", badges.toString());
   
-  // Create +1 floating text
-  const plusOne = document.createElement("a-text");
-  plusOne.setAttribute("value", "+1 Badge!");
-  plusOne.setAttribute("color", "green");
-  plusOne.setAttribute("align", "center");
-  plusOne.setAttribute("scale", "2 2 2");
-  plusOne.setAttribute("position", `0 2 -${currentDistance + 1}`);
-  plusOne.setAttribute("animation", "property: position; to: 0 4 -2; dur: 1500; easing: easeOutQuad");
-  document.querySelector("a-scene").appendChild(plusOne);
-  
-  speak("Badge collected! Keep going!");
-  
-  // Respawn after 2 seconds
-  setTimeout(() => {
-    plusOne.remove();
-    currentDistance = MAX_DISTANCE;
-    stepCount = 0;
-    document.getElementById("ar-distance").textContent = currentDistance.toFixed(1);
-    if (coin) {
-      coin.setAttribute("position", `0 1.5 -${MAX_DISTANCE}`);
-      coin.setAttribute("scale", "0.5 0.5 0.5");
-      coin.setAttribute("visible", "true");
-    }
-    isPlaying = true;
-  }, 2000);
+  const cameraEl = document.querySelector("a-camera");
+  if (cameraEl && cameraEl.object3D) {
+    const camPos = new THREE.Vector3();
+    cameraEl.object3D.getWorldPosition(camPos);
+    
+    const camDir = new THREE.Vector3();
+    cameraEl.object3D.getWorldDirection(camDir);
+    
+    const textPos = camPos.clone().add(camDir.multiplyScalar(2));
+    
+    const plusOne = document.createElement("a-text");
+    plusOne.setAttribute("value", "+1 Badge!");
+    plusOne.setAttribute("color", "green");
+    plusOne.setAttribute("align", "center");
+    plusOne.setAttribute("scale", "2 2 2");
+    plusOne.setAttribute("position", `${textPos.x} 1.5 ${textPos.z}`);
+    plusOne.setAttribute("animation", `property: position; to: ${textPos.x} 3 ${textPos.z}; dur: 1500; easing: easeOutQuad`);
+    document.querySelector("a-scene").appendChild(plusOne);
+    
+    speak("Badge collected! Follow the arrow to the next one!");
+    
+    setTimeout(() => {
+      plusOne.remove();
+      spawnCoin();
+      isPlaying = true;
+      compassLoop();
+    }, 2000);
+  }
 }
 
 export async function startARGame() {
   setupScene();
-  currentDistance = MAX_DISTANCE;
-  stepCount = 0;
-  isPlaying = true;
-  document.getElementById("ar-distance").textContent = currentDistance.toFixed(1);
   
-  const coin = document.getElementById("ar-coin");
-  if (coin) {
-    coin.setAttribute("position", `0 1.5 -${MAX_DISTANCE}`);
-    coin.setAttribute("scale", "0.5 0.5 0.5");
-    coin.setAttribute("visible", "true");
-  }
+  // Wait a tiny bit for A-Frame to mount the camera
+  setTimeout(() => {
+    spawnCoin();
+    isPlaying = true;
+    compassLoop();
+  }, 500);
   
   try {
     arStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
@@ -129,7 +174,6 @@ export async function startARGame() {
     console.error("Camera access denied or unavailable:", err);
   }
   
-  // Request motion permissions for iOS 13+
   if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
     try {
       const permission = await DeviceMotionEvent.requestPermission();
@@ -143,7 +187,7 @@ export async function startARGame() {
     window.addEventListener("devicemotion", handleMotion);
   }
   
-  await speak("I have placed a hologram in front of you. Push your wheelchair forward to collect it!");
+  await speak("I have placed a hologram. Follow the red compass arrow to find it!");
 }
 
 export function stopARGame() {
