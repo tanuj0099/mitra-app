@@ -408,6 +408,15 @@ document.querySelectorAll("[data-mode]").forEach(btn =>
   })
 );
 
+const EMOTIONS = ['idle', 'happy', 'listening', 'speaking', 'sad', 'urgent', 'joke'];
+let emotionIdx = 0;
+$("btn-emotions").addEventListener("click", () => {
+  emotionIdx = (emotionIdx + 1) % EMOTIONS.length;
+  const emotion = EMOTIONS[emotionIdx];
+  if (faces.home) faces.home.setState(emotion);
+  speak("I am feeling " + emotion);
+});
+
 // While streaming to the big screen, mirror the coach HUD there as JSON
 let hudTimer = null;
 function startHudRelay() {
