@@ -98,39 +98,8 @@ function gameLoop() {
 }
 
 function handleMotion(e) {
-  if (!isPlaying) return;
-  
-  const accel = e.accelerationIncludingGravity || e.acceleration;
-  if (!accel) return;
-  
-  const y = accel.y;
-  const delta = Math.abs(y - lastAccelY);
-  lastAccelY = y;
-  
-  // Simulating forward movement by shaking the phone
-  if (delta > 1.5) {
-    stepCount++;
-    if (stepCount >= 3) {
-      stepCount = 0;
-      
-      const coin = document.getElementById("ar-coin");
-      const cameraEl = document.querySelector("a-camera");
-      
-      if (coin && cameraEl && cameraEl.object3D) {
-        const camPos = new THREE.Vector3();
-        cameraEl.object3D.getWorldPosition(camPos);
-        
-        const coinPos = new THREE.Vector3();
-        coin.object3D.getWorldPosition(coinPos);
-        
-        // Move coin 0.3m closer to camera
-        const dir = new THREE.Vector3().subVectors(camPos, coinPos).normalize();
-        const newPos = coinPos.clone().add(dir.multiplyScalar(0.3));
-        
-        coin.setAttribute("position", `${newPos.x} ${newPos.y} ${newPos.z}`);
-      }
-    }
-  }
+  // Purposefully left empty.
+  // The coin is now stationary, requiring physical positional tracking to collect.
 }
 
 async function collectCoin() {

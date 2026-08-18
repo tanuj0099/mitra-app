@@ -48,3 +48,14 @@ body {
 
 @keyframes slow-blink { 0%, 90% { transform: scaleY(1); opacity: 1; } 95% { transform: scaleY(0.1); opacity: 0.5; } 100% { transform: scaleY(1); opacity: 1; } }
 .animate-slow-blink { animation: slow-blink 6s ease-in-out infinite; transform-origin: center; }
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}

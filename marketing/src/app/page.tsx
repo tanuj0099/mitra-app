@@ -4,6 +4,7 @@ import { Footer } from "../components/Footer";
 import { BlinkingEyes } from "../components/BlinkingEyes";
 import { IconCompanion, IconCoach, IconSOS } from "../components/Icons";
 import { StatsCarousel } from "../components/StatsCarousel";
+import { InfiniteMarquee } from "../components/InfiniteMarquee";
 
 export default function Home() {
   return (
@@ -12,8 +13,15 @@ export default function Home() {
       <main className="flex-1 flex flex-col w-full overflow-hidden">
         
         {/* HERO SECTION */}
-        <section className="w-full min-h-[85vh] flex flex-col items-center justify-center text-center px-6 py-20 bg-paper">
-          <div className="max-w-3xl mx-auto flex flex-col items-center">
+        <section className="relative w-full min-h-[85vh] flex flex-col items-center justify-center text-center px-6 py-20 bg-paper overflow-hidden">
+          {/* MASSIVE BACKGROUND GRAPHIC */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden select-none">
+            <h1 className="text-[25vw] font-serif font-black text-ink/5 tracking-tighter leading-none whitespace-nowrap opacity-40">
+              HAPPY
+            </h1>
+          </div>
+          
+          <div className="max-w-3xl mx-auto flex flex-col items-center relative z-10">
             <div className="mb-12">
               <BlinkingEyes className="w-40 h-40 md:w-56 md:h-56 text-ink" />
             </div>
@@ -32,13 +40,11 @@ export default function Home() {
           </div>
         </section>
 
-        {/* DIVIDER */}
-        <div className="w-full flex justify-center py-12">
-          <BlinkingEyes className="w-8 h-8 text-ink/20" animate={false} />
-        </div>
+        {/* FULL WIDTH CAROUSEL */}
+        <InfiniteMarquee />
 
         {/* PROBLEM SECTION */}
-        <section className="w-full px-6 py-24 bg-paper">
+        <section className="w-full px-6 py-24 bg-paper mt-8">
           <div className="max-w-2xl mx-auto">
             <blockquote className="font-serif text-3xl md:text-4xl text-ink leading-relaxed mb-8">
               "We build homes for accessibility, but we leave the days completely empty. The hardest part of limited mobility isn't the physical barriers—it's the isolation."
