@@ -67,8 +67,8 @@ export class RobotFace {
       const ry = eyeRy * (this.state === "happy" ? 1 : openness);
 
       const isUrgent = this.state === "urgent";
-      const color = isUrgent ? "#ffb454" : "#37e0ff";
-      const shadow = isUrgent ? "rgba(255,180,84,0.7)" : "rgba(55,224,255,0.7)";
+      const color = isUrgent ? "#B8965A" : "#2F5D5A";
+      const shadow = isUrgent ? "rgba(184,150,90,0.7)" : "rgba(47,93,90,0.7)";
 
       // big oval eye
       ctx.fillStyle = color;
@@ -98,7 +98,7 @@ export class RobotFace {
 
     // small mouth
     const my = h * 0.8 + bob;
-    ctx.strokeStyle = this.state === "urgent" ? "#ffb454" : "#37e0ff";
+    ctx.strokeStyle = this.state === "urgent" ? "#B8965A" : "#2F5D5A";
     ctx.lineWidth = Math.max(3, h * 0.011);
     ctx.lineCap = "round";
     ctx.beginPath();

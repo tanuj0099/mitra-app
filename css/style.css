@@ -1,11 +1,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --bg: #0b1020;
-  --eye: #37e0ff;
-  --accent: #ffb454;
-  --text: #eaf6ff;
-  --danger: #ff6b6b;
+  --bg: #F6F4EF;
+  --eye: #22262B;
+  --accent: #2F5D5A;
+  --text: #22262B;
+  --danger: #4F7A5B;
 }
 
 html, body {
