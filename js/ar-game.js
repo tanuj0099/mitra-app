@@ -20,6 +20,10 @@ function setupScene() {
         </a-entity>
       </a-camera>
       
+      <!-- Lighting -->
+      <a-light type="ambient" color="#ffffff" intensity="0.6"></a-light>
+      <a-light type="directional" color="#ffffff" intensity="0.8" position="-1 2 1"></a-light>
+      
       <!-- Hologram Water Droplet -->
       <a-entity id="ar-coin" position="0 1.5 -8" scale="0.5 0.5 0.5" animation="property: position; dir: alternate; loop: true; dur: 2000; to: 0 1.7 -8">
         <a-sphere color="#37e0ff" radius="0.3" opacity="0.8"></a-sphere>
