@@ -27,7 +27,7 @@ async function callAI(messages, { system = PERSONA, maxTokens = 250 } = {}) {
   if (!hasBackendKey) return null;
   
   try {
-    const res = await fetch("/api/chat", {
+    const res = await fetch("/api/ai", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ system, messages, maxTokens }),
