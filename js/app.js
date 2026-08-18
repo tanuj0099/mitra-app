@@ -3,7 +3,7 @@
 
 import { RobotFace } from "./face.js";
 import { initSpeech, unlockAudio, speak, stopSpeaking, listenOnce, hasRecognition, listVoices, setVoice, setSpeakProxy } from "./speech.js";
-import { chatReply, coachFeedback, getStory, getJoke, getRiddle, checkBackendStatus, hasBackendKey } from "./claude.js?v=4";
+import { chatReply, coachFeedback, getStory, getJoke, getRiddle, checkBackendStatus, hasBackendKey } from "./ai.js?v=5";
 import { Coach } from "./coach.js";
 import { AirMusic, NOTE_FREQS, synthNote } from "./piano.js?v=3";
 import { VoiceLoop } from "./voice.js";

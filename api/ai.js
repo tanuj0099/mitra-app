@@ -38,13 +38,14 @@ export default async function handler(req, res) {
     }
   }
 
-  const MODELS = ['llama-3.2-11b-vision-preview', 'llama-3.1-8b-instant'];
+  const MODELS = ['llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview', 'llama-3.3-70b-versatile', 'llama3-8b-8192'];
   
   for (let i = 0; i < MODELS.length; i++) {
     const model = MODELS[i];
     
     let currentMessages = formattedMessages;
-    if (model === 'llama-3.1-8b-instant') {
+    // Only vision models support image_url arrays
+    if (!model.includes('vision')) {
       currentMessages = formattedMessages.map(msg => {
         if (Array.isArray(msg.content)) {
           const textOnly = msg.content.filter(c => c.type === 'text').map(c => c.text).join(" ");
@@ -65,8 +66,9 @@ export default async function handler(req, res) {
       });
       
       if (!apiRes.ok) {
-        console.error("Groq Error for", model, await apiRes.text());
-        if (i === MODELS.length - 1) return res.status(apiRes.status).json({ error: 'Groq Error' });
+        const errText = await apiRes.text();
+        console.error("Groq Error for", model, errText);
+        if (i === MODELS.length - 1) return res.status(apiRes.status).json({ error: errText || 'Groq Error' });
         continue;
       }
       
