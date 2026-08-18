@@ -142,11 +142,17 @@ export class AirMusic {
             const nx = 1 - p.x;  // mirror to match mirrored video
             const ny = p.y;
             const id = `${hi}-${fi}`;
-            const f = this.fingers[id] || (this.fingers[id] = { x: nx, y: ny, lastNoteAt: 0, trail: [] });
+            const currentIdx = Math.min(NOTES.length - 1, Math.max(0, Math.floor((1 - ny) * NOTES.length)));
+            const f = this.fingers[id] || (this.fingers[id] = { x: nx, y: ny, lastNoteAt: 0, trail: [], currentZone: -1 });
             const speed = Math.hypot(nx - f.x, ny - f.y);
-            if (speed > SPEED_TRIGGER && now - f.lastNoteAt > NOTE_COOLDOWN_MS) {
+            
+            // Zone-entry trigger (Harp style) instead of speed trigger
+            if (f.currentZone !== currentIdx && now - f.lastNoteAt > 150) {
+              // Only trigger if they enter the target zone (or any zone, but we want it to feel like playing a song)
+              // We'll play any note they hit, but they must enter the zone.
+              f.currentZone = currentIdx;
               f.lastNoteAt = now;
-              this.playNote(ny, speed);
+              this.playNote(ny, 0.08); // slight fixed volume
               this.ripples.push({ x: nx * w, y: ny * h, color: TIP_COLORS[fi], t0: now });
             }
             f.x = nx; f.y = ny;
@@ -220,9 +226,20 @@ export class AirMusic {
       const targetNoteName = NOTE_NAMES[targetNoteIdx];
       
       // Draw target zone highlights
+      // Draw target zone highlights with vibrant colors
+      const NOTE_BOX_COLORS = [
+        "hsla(340, 100%, 60%, 0.4)", // C
+        "hsla(25, 100%, 60%, 0.4)",  // D
+        "hsla(50, 100%, 50%, 0.4)",  // E
+        "hsla(120, 100%, 40%, 0.4)", // F
+        "hsla(190, 100%, 50%, 0.4)", // G
+        "hsla(230, 100%, 65%, 0.4)", // A
+        "hsla(280, 100%, 60%, 0.4)", // Bb
+        "hsla(320, 100%, 70%, 0.4)"  // High C
+      ];
       const zoneHeight = h / NOTES.length;
       const zoneY = h - ((targetNoteIdx + 1) * zoneHeight);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+      ctx.fillStyle = NOTE_BOX_COLORS[targetNoteIdx];
       ctx.fillRect(0, zoneY, w, zoneHeight);
 
       // Draw instructions

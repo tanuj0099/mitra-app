@@ -5,7 +5,7 @@ import { RobotFace } from "./face.js";
 import { initSpeech, unlockAudio, speak, stopSpeaking, listenOnce, hasRecognition, listVoices, setVoice, setSpeakProxy } from "./speech.js";
 import { chatReply, coachFeedback, getStory, getJoke, getRiddle, checkBackendStatus, hasBackendKey } from "./claude.js";
 import { Coach } from "./coach.js";
-import { AirMusic, NOTE_FREQS, synthNote } from "./piano.js";
+import { AirMusic, NOTE_FREQS, synthNote } from "./piano.js?v=2";
 import { VoiceLoop } from "./voice.js";
 import { initFaceSync, initStageSync } from "./sync.js";
 import { PersonTracker } from "./tracker.js";
