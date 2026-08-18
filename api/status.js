@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const key = process.env.OPENAI_API_KEY;
+  const key = process.env.GROQ_API_KEY;
   if (!key) {
     return res.status(200).json({ hasKey: false });
   }

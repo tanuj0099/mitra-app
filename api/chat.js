@@ -17,9 +17,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const key = process.env.OPENAI_API_KEY;
+  const key = process.env.GROQ_API_KEY;
   if (!key) {
-    return res.status(500).json({ error: 'Server missing OPENAI_API_KEY in Environment Variables' });
+    return res.status(500).json({ error: 'Server missing GROQ_API_KEY in Environment Variables' });
   }
 
   const { messages, system, maxTokens } = req.body;
@@ -38,11 +38,11 @@ export default async function handler(req, res) {
     }
   }
 
-  const MODELS = ['gpt-4o', 'gpt-4o-mini'];
+  const MODELS = ['llama-3.2-11b-vision-preview', 'llama-3.1-8b-instant'];
   
   for (const model of MODELS) {
     try {
-      const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+      const apiRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${key}`,
@@ -53,7 +53,7 @@ export default async function handler(req, res) {
       
       if (apiRes.status === 404) continue;
       if (!apiRes.ok) {
-        return res.status(apiRes.status).json({ error: 'OpenAI Error' });
+        return res.status(apiRes.status).json({ error: 'Groq Error' });
       }
       
       const data = await apiRes.json();
