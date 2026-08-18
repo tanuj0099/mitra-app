@@ -204,7 +204,8 @@ html, body {
   top: 0.9rem;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(5, 12, 26, 0.65);
+  background: rgba(253, 251, 247, 0.85);
+  color: var(--text);
   border-radius: 999px;
   padding: 0.45rem 1.2rem;
   font-size: 1rem;
@@ -223,18 +224,19 @@ html, body {
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
-  background: rgba(5, 12, 26, 0.7);
+  background: rgba(253, 251, 247, 0.85);
+  color: var(--text);
   border-radius: 1.2rem;
   padding: 0.7rem 2rem;
   min-width: 40%;
 }
 #stage-ex-name { font-size: 1.4rem; }
-#stage-reps { font-size: 4.5rem; font-weight: 800; color: var(--eye); line-height: 1.1; }
+#stage-reps { font-size: 4.5rem; font-weight: 800; color: var(--accent); line-height: 1.1; }
 #stage-bar {
   width: 100%;
   height: 0.7rem;
   border-radius: 999px;
-  background: rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.1);
   overflow: hidden;
   margin: 0.3rem 0 0.4rem;
 }
@@ -314,7 +316,8 @@ html, body {
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
-  background: rgba(5, 12, 26, 0.65);
+  background: rgba(253, 251, 247, 0.85);
+  color: var(--text);
   border-radius: 1rem;
   padding: 0.5rem 1.4rem;
   min-width: 40%;
@@ -335,7 +338,7 @@ html, body {
   width: 100%;
   height: 0.55rem;
   border-radius: 999px;
-  background: rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.1);
   overflow: hidden;
   margin: 0.25rem 0 0.35rem;
 }
@@ -343,15 +346,16 @@ html, body {
   height: 100%;
   width: 0%;
   border-radius: 999px;
-  background: var(--eye);
+  background: var(--accent);
   transition: width 80ms linear;
 }
 #coach-bar-fill.full { background: #7dffa0; }
-#coach-reps { font-size: 3rem; font-weight: 800; color: var(--eye); line-height: 1.1; }
+#coach-reps { font-size: 3rem; font-weight: 800; color: var(--accent); line-height: 1.1; }
 #coach-feedback { font-size: 1rem; color: var(--accent); min-height: 1.3em; }
 .coach-controls .mode-btn {
-  background: rgba(5, 12, 26, 0.5);
-  opacity: 0.8;
+  background: rgba(253, 251, 247, 0.9);
+  color: var(--text);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 .pill-btn {
   padding: 0.7rem 1.3rem;
@@ -530,7 +534,7 @@ html, body {
   width: 100%;
   height: 0.55rem;
   border-radius: 999px;
-  background: rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.1);
   overflow: hidden;
   margin: 0.25rem 0 0.35rem;
 }
@@ -538,15 +542,16 @@ html, body {
   height: 100%;
   width: 0%;
   border-radius: 999px;
-  background: var(--eye);
+  background: var(--accent);
   transition: width 80ms linear;
 }
 #coach-bar-fill.full { background: #7dffa0; }
-#coach-reps { font-size: 3rem; font-weight: 800; color: var(--eye); line-height: 1.1; }
+#coach-reps { font-size: 3rem; font-weight: 800; color: var(--accent); line-height: 1.1; }
 #coach-feedback { font-size: 1rem; color: var(--accent); min-height: 1.3em; }
 .coach-controls .mode-btn {
-  background: rgba(5, 12, 26, 0.5);
-  opacity: 0.8;
+  background: rgba(253, 251, 247, 0.9);
+  color: var(--text);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 .pill-btn {
   padding: 0.7rem 1.3rem;
@@ -776,3 +781,15 @@ html, body {
 .activity-log li { display: flex; justify-content: space-between; padding: 1rem; border-bottom: 1px solid var(--border); }
 .act-name { font-weight: bold; }
 .act-stats { color: #888; }
+
+ . m o d e - b t n . w i d e - b t n ,   . e n t - b t n . w i d e - b t n   { 
+     w i d t h :   a u t o ; 
+     p a d d i n g :   0   1 . 2 r e m ; 
+     b o r d e r - r a d i u s :   9 9 9 p x ; 
+     g a p :   0 . 6 r e m ; 
+ } 
+ . m o d e - b t n . w i d e - b t n   s p a n ,   . e n t - b t n . w i d e - b t n   s p a n   { 
+     f o n t - s i z e :   1 . 1 r e m ; 
+     f o n t - w e i g h t :   6 0 0 ; 
+ }  
+ 
