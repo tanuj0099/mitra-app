@@ -40,6 +40,12 @@ html, body {
   align-items: center; justify-content: center;
   text-align: center;
 }
+/* Triage Dashboard */
+#screen-triage {
+  align-items: center; justify-content: flex-start;
+  padding: 4rem 1rem 8rem 1rem;
+  overflow-y: auto;
+}
 @media (orientation: portrait) {
   #rotate-overlay { display: flex; }
 }
@@ -755,3 +761,8 @@ html, body {
   width: 4.5rem;
   height: 4.5rem;
 }
+
+.activity-log { list-style: none; padding: 0; margin: 1rem; }
+.activity-log li { display: flex; justify-content: space-between; padding: 1rem; border-bottom: 1px solid var(--border); }
+.act-name { font-weight: bold; }
+.act-stats { color: #888; }

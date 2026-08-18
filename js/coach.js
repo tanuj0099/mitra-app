@@ -286,7 +286,7 @@ export class Coach {
       this.lastMovementAngle = angle;
     }
     
-    if (performance.now() - this.lastMovementTime > 20000 && this.safetyTier === 0) {
+    if (performance.now() - this.lastMovementTime > 60000 && this.safetyTier === 0) {
       this.safetyTier = 1;
       this.stop();
       window.dispatchEvent(new CustomEvent("safety-check-tier1"));
@@ -294,19 +294,25 @@ export class Coach {
     const range = this.maxSeen - this.minSeen;
 
     if (this.state === "calibrating") {
-      if (range < (this.exercise.minRange || MIN_RANGE_DEG)) { this.updateBar(0); return; }
+      if (range < (this.exercise.minRange || MIN_RANGE_DEG)) { 
+        this.updateBar(0); 
+        // If range is too small, allow minSeen to drift so we don't get permanently stuck at 999
+        this.minSeen = Math.min(this.minSeen, angle);
+        this.maxSeen = Math.max(this.maxSeen, angle);
+        return; 
+      }
       const mid = this.minSeen + range / 2;
       this.updateBar((angle - this.minSeen) / range);
-      if (!this.calibAbove && angle > mid + range * 0.15) {
+      if (!this.calibAbove && angle > mid + range * 0.25) {
         this.calibAbove = true;
-      } else if (this.calibAbove && angle < mid - range * 0.15) {
+      } else if (this.calibAbove && angle < mid - range * 0.25) {
         this.calibAbove = false;
         this.calibReps++;
         if (this.calibReps < CALIB_REPS_NEEDED) speak("Good, one more!");
         else {
-          // personalized thresholds from the user's own range of motion
-          this.upT = this.minSeen + range * 0.65;
-          this.downT = this.minSeen + range * 0.30;
+          // STRICTER personalized thresholds to prevent random counting
+          this.upT = this.minSeen + range * 0.80;
+          this.downT = this.minSeen + range * 0.20;
           this.state = "active";
           this.phase = "down";
           this.reps = 0;

@@ -592,7 +592,15 @@ async function startCoach() {
   }
 }
 
-$("btn-switch-exercise").addEventListener("click", () => coach.switchExercise());
+$("btn-restart-coach").addEventListener("click", () => {
+  if (activeCoach) {
+    activeCoach.resetSession();
+    speak("Calibration restarted. Let's try again.");
+  }
+});
+$("btn-switch-exercise").addEventListener("click", () => {
+  if (activeCoach) activeCoach.switchExercise();
+});
 $("btn-ask-coach").addEventListener("click", () => coach.askCoach());
 $("btn-end-session").addEventListener("click", async () => {
   await coach.endSession();
@@ -715,27 +723,23 @@ async function showProgress() {
   seedDemoIfEmpty();
   show("progress");
   
-  // Render Heatmap
-  const map = getHeatmapData();
+  // Render Today's Activity Log
   const hm = $("progress-heatmap");
-  hm.innerHTML = '<div class="heatmap-grid"></div>';
-  const grid = hm.querySelector(".heatmap-grid");
-  
-  const today = new Date();
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toISOString().slice(0, 10);
-    const reps = map[dateStr] || 0;
-    
-    const cell = document.createElement("div");
-    cell.className = "heatmap-cell";
-    if (reps > 0) cell.classList.add("level-1");
-    if (reps > 10) cell.classList.add("level-2");
-    if (reps > 20) cell.classList.add("level-3");
-    if (reps > 30) cell.classList.add("level-4");
-    cell.title = `${dateStr}: ${reps} reps`;
-    grid.appendChild(cell);
+  const todayEntries = getEntries(1); // Get last 24h
+  if (todayEntries.length === 0) {
+    hm.innerHTML = '<p style="padding:1rem; opacity:0.7">No exercises logged today yet. Time to get moving!</p>';
+  } else {
+    hm.innerHTML = '<ul class="activity-log"></ul>';
+    const ul = hm.querySelector('.activity-log');
+    todayEntries.forEach(e => {
+      if (e.sosEventFlag) return;
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <div class="act-name">${e.exerciseType}</div>
+        <div class="act-stats">${e.repsCompleted} reps • ${e.durationSec}s</div>
+      `;
+      ul.appendChild(li);
+    });
   }
   
   $("progress-summary").textContent = buildWeeklySpeech();

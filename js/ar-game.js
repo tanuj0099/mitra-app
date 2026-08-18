@@ -65,7 +65,6 @@ function handleMotion(e) {
 
 async function collectCoin() {
   isPlaying = false;
-  window.removeEventListener("devicemotion", handleMotion);
   
   // Visual explosion/hide
   const coin = document.getElementById("ar-coin");
@@ -76,16 +75,36 @@ async function collectCoin() {
     }, 500);
   }
   
-  await speak("Congratulations! You reached the hologram and earned a new Happy Badge!");
-  
   // Log badge locally
   let badges = parseInt(localStorage.getItem("happy_ar_badges") || "0", 10);
   badges++;
   localStorage.setItem("happy_ar_badges", badges.toString());
   
+  // Create +1 floating text
+  const plusOne = document.createElement("a-text");
+  plusOne.setAttribute("value", "+1 Badge!");
+  plusOne.setAttribute("color", "green");
+  plusOne.setAttribute("align", "center");
+  plusOne.setAttribute("scale", "2 2 2");
+  plusOne.setAttribute("position", `0 2 -${currentDistance + 1}`);
+  plusOne.setAttribute("animation", "property: position; to: 0 4 -2; dur: 1500; easing: easeOutQuad");
+  document.querySelector("a-scene").appendChild(plusOne);
+  
+  speak("Badge collected! Keep going!");
+  
+  // Respawn after 2 seconds
   setTimeout(() => {
-    window.dispatchEvent(new CustomEvent("ar-game-done"));
-  }, 3000);
+    plusOne.remove();
+    currentDistance = MAX_DISTANCE;
+    stepCount = 0;
+    document.getElementById("ar-distance").textContent = currentDistance.toFixed(1);
+    if (coin) {
+      coin.setAttribute("position", `0 1.5 -${MAX_DISTANCE}`);
+      coin.setAttribute("scale", "0.5 0.5 0.5");
+      coin.setAttribute("visible", "true");
+    }
+    isPlaying = true;
+  }, 2000);
 }
 
 export async function startARGame() {
