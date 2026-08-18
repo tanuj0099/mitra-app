@@ -9,6 +9,7 @@ import { AirMusic, NOTE_FREQS, synthNote } from "./piano.js";
 import { VoiceLoop } from "./voice.js";
 import { initFaceSync, initStageSync } from "./sync.js";
 import { PersonTracker } from "./tracker.js";
+import { seedDemoIfEmpty, logSOSEvent, getHeatmapData, getRomTrend, buildWeeklySpeech, exportCSV, exportPlainText } from "./tracking.js";
 import { RobotLink, hasBluetooth } from "./robot.js";
 
 const $ = (id) => document.getElementById(id);
@@ -53,7 +54,7 @@ let activeFace = faces.boot;
 faces.boot.start();
 
 // ---------- Screen navigation ----------
-const screens = ["boot", "home", "chat", "coach", "entertain", "piano", "stage"];
+const screens = ["boot", "home", "chat", "coach", "entertain", "piano", "stage", "progress", "sos"];
 let currentScreen = "boot";
 
 const captions = { home: "home-caption", chat: "chat-caption", entertain: "ent-caption" };
@@ -208,6 +209,7 @@ async function handleUtterance(raw) {
   }
 
   // Global intents
+  if (has(/\b(mitra help|sos|i need help|help me)\b/)) { triggerSOS(); return; }
   if (has(/piano|keyboard|air music|play.*fingers|fingers.*play|make.*music/)) { await beginPiano(); return; }
   if (has(/exercis|workout|work out|physio|stretch|fitness|training/)) { await beginCoach(); return; }
   if (has(/stor(y|ies)|kahani/)) { show("entertain"); await doEnt("story"); return; }
@@ -384,6 +386,7 @@ document.querySelectorAll("[data-mode]").forEach(btn =>
   btn.addEventListener("click", async () => {
     const mode = btn.dataset.mode;
     if (mode === "coach") { beginCoach(); return; }
+    if (mode === "progress") { await showProgress(); return; }
     show(mode);
     if (mode === "chat") startChat();
     if (mode === "entertain") speak("Pick one — story, joke, riddle, or music!");
@@ -726,3 +729,152 @@ $("btn-test-key").addEventListener("click", async () => {
 });
 
 refreshApiStatus();
+
+// ---------- Progress ----------
+async function showProgress() {
+  seedDemoIfEmpty();
+  show("progress");
+  
+  // Render Heatmap
+  const map = getHeatmapData();
+  const hm = $("progress-heatmap");
+  hm.innerHTML = '<div class="heatmap-grid"></div>';
+  const grid = hm.querySelector(".heatmap-grid");
+  
+  const today = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const reps = map[dateStr] || 0;
+    
+    const cell = document.createElement("div");
+    cell.className = "heatmap-cell";
+    if (reps > 0) cell.classList.add("level-1");
+    if (reps > 10) cell.classList.add("level-2");
+    if (reps > 20) cell.classList.add("level-3");
+    if (reps > 30) cell.classList.add("level-4");
+    cell.title = `${dateStr}: ${reps} reps`;
+    grid.appendChild(cell);
+  }
+  
+  $("progress-summary").textContent = buildWeeklySpeech();
+  
+  // Render Chart (Simple SVG)
+  const trend = getRomTrend();
+  const chart = $("progress-chart");
+  if (trend.length > 1) {
+    const maxRom = Math.max(90, ...trend.map(t => t.rom));
+    const pts = trend.map((t, i) => `${(i / (trend.length - 1)) * 100},${100 - (t.rom / maxRom) * 100}`).join(" ");
+    chart.innerHTML = `<svg viewBox="0 -10 100 120" width="100%" height="150px" preserveAspectRatio="none">
+      <polyline points="${pts}" fill="none" stroke="#ffb454" stroke-width="2" vector-effect="non-scaling-stroke" />
+      ${trend.map((t, i) => `<circle cx="${(i / (trend.length - 1)) * 100}" cy="${100 - (t.rom / maxRom) * 100}" r="2" fill="#37e0ff" />`).join("")}
+    </svg>`;
+  } else {
+    chart.innerHTML = "<p>Not enough range-of-motion data for a trend yet.</p>";
+  }
+  
+  await speak($("progress-summary").textContent);
+}
+
+$("btn-export-csv").addEventListener("click", () => {
+  navigator.clipboard.writeText(exportCSV()).then(() => speak("Data copied to clipboard"));
+});
+
+// ---------- SOS Feature ----------
+let sosTimer = null;
+let sosInterval = null;
+const sosBtn = $("sos-toggle");
+
+function triggerSOS() {
+  if (currentScreen === "sos") return; // Already in SOS
+  logSOSEvent();
+  stopSpeaking();
+  show("sos");
+  if (activeFace) activeFace.setState("urgent");
+  
+  const num = localStorage.getItem("mitra_sos_number") || "";
+  $("sos-contact-info").textContent = num ? `Calling ${num}...` : "Calling emergency contact...";
+  
+  speak("I'm getting help. Stay with me.");
+  
+  if (num) {
+    const a = document.createElement("a");
+    a.href = `tel:${num}`;
+    a.click();
+    
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const sms = document.createElement("a");
+        sms.href = `sms:${num}?body=I need help — [${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}]`;
+        sms.click();
+      }, () => {});
+    }
+  }
+  
+  clearInterval(sosInterval);
+  sosInterval = setInterval(() => {
+    speak("I'm getting help. Stay with me.");
+  }, 20000);
+}
+
+function cancelSOS() {
+  if (currentScreen !== "sos") return;
+  clearInterval(sosInterval);
+  goHome("Emergency alert cancelled.");
+}
+
+// SOS Button Long Press
+let pressStart = 0;
+function handleSosDown(e) {
+  e.preventDefault();
+  pressStart = performance.now();
+  sosBtn.classList.add("pressing");
+  sosTimer = setTimeout(() => {
+    triggerSOS();
+    sosBtn.classList.remove("pressing");
+  }, 1000);
+}
+function handleSosUp(e) {
+  e.preventDefault();
+  clearTimeout(sosTimer);
+  sosBtn.classList.remove("pressing");
+  if (currentScreen === "sos" && performance.now() - pressStart > 1000) {
+    cancelSOS();
+  }
+}
+sosBtn.addEventListener("touchstart", handleSosDown);
+sosBtn.addEventListener("mousedown", handleSosDown);
+sosBtn.addEventListener("touchend", handleSosUp);
+sosBtn.addEventListener("mouseup", handleSosUp);
+sosBtn.addEventListener("mouseleave", handleSosUp);
+
+const sosCancelBtn = $("btn-sos-cancel");
+let cancelTimer = null;
+function handleCancelDown(e) {
+  e.preventDefault();
+  sosCancelBtn.classList.add("pressing");
+  cancelTimer = setTimeout(() => {
+    cancelSOS();
+    sosCancelBtn.classList.remove("pressing");
+  }, 1000);
+}
+function handleCancelUp(e) {
+  e.preventDefault();
+  clearTimeout(cancelTimer);
+  sosCancelBtn.classList.remove("pressing");
+}
+sosCancelBtn.addEventListener("touchstart", handleCancelDown);
+sosCancelBtn.addEventListener("mousedown", handleCancelDown);
+sosCancelBtn.addEventListener("touchend", handleCancelUp);
+sosCancelBtn.addEventListener("mouseup", handleCancelUp);
+sosCancelBtn.addEventListener("mouseleave", handleCancelUp);
+
+// Settings for SOS
+const sosNumberInput = $("sos-number-input");
+if (sosNumberInput) {
+  sosNumberInput.value = localStorage.getItem("mitra_sos_number") || "";
+  sosNumberInput.addEventListener("input", (e) => {
+    localStorage.setItem("mitra_sos_number", e.target.value);
+  });
+}

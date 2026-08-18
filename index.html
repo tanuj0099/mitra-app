@@ -40,6 +40,7 @@
     <nav id="home-nav" class="icon-nav">
       <button class="mode-btn" data-mode="chat" title="Talk">💬</button>
       <button class="mode-btn" data-mode="coach" title="Exercise">🏋️</button>
+      <button class="mode-btn" data-mode="progress" title="Progress">📈</button>
       <button class="mode-btn" data-mode="entertain" title="Fun">🎵</button>
     </nav>
     <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
@@ -99,6 +100,31 @@
     <button class="icon-btn back" data-back>←</button>
   </section>
 
+  <!-- Progress -->
+  <section id="screen-progress" class="screen">
+    <div class="progress-header">
+      <h2>Your Progress</h2>
+    </div>
+    <div class="progress-content">
+      <div id="progress-summary"></div>
+      <div class="heatmap-container" id="progress-heatmap"></div>
+      <div class="chart-container" id="progress-chart"></div>
+      <div class="export-actions">
+        <button id="btn-export-csv" class="pill-btn">Copy Data</button>
+      </div>
+    </div>
+    <button class="icon-btn back" data-back>←</button>
+  </section>
+
+  <!-- SOS Screen -->
+  <section id="screen-sos" class="screen">
+    <div class="sos-content">
+      <h1>EMERGENCY</h1>
+      <p id="sos-contact-info">Calling emergency contact...</p>
+      <button id="btn-sos-cancel" class="pill-btn danger">Press and hold to cancel</button>
+    </div>
+  </section>
+
   <!-- Stage display (laptop / big screen mode, ?stage=1): shows the phone's
        camera + overlay stream. Pure display — no camera or mic of its own. -->
   <section id="screen-stage" class="screen">
@@ -123,6 +149,9 @@
   <!-- Shown on the phone when the big screen is genuinely linked -->
   <div id="stage-dot" class="hidden" title="Big screen connected">🖥</div>
 
+  <!-- Persistent SOS Button -->
+  <button id="sos-toggle" title="Press and hold for SOS">🆘</button>
+
   <!-- Settings modal -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-card">
@@ -138,6 +167,9 @@
         <input id="api-key-input" type="password" placeholder="sk-ant-…" autocomplete="off" />
       </label>
       <div id="api-status" class="api-status">Offline mode — scripted responses</div>
+      <label>Emergency Contact Number
+        <input id="sos-number-input" type="tel" placeholder="e.g. 911" autocomplete="off" />
+      </label>
       <div class="modal-actions">
         <button id="btn-test-key" class="pill-btn">Save &amp; test</button>
         <button id="btn-clear-key" class="pill-btn danger">Clear key</button>

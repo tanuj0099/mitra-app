@@ -66,9 +66,13 @@ export class RobotFace {
       const ex = cx + side * w * 0.15;
       const ry = eyeRy * (this.state === "happy" ? 1 : openness);
 
+      const isUrgent = this.state === "urgent";
+      const color = isUrgent ? "#ffb454" : "#37e0ff";
+      const shadow = isUrgent ? "rgba(255,180,84,0.7)" : "rgba(55,224,255,0.7)";
+
       // big oval eye
-      ctx.fillStyle = "#37e0ff";
-      ctx.shadowColor = "rgba(55,224,255,0.7)";
+      ctx.fillStyle = color;
+      ctx.shadowColor = shadow;
       ctx.shadowBlur = w * 0.02;
       ctx.beginPath();
       ctx.ellipse(ex, cy, eyeRx, ry, 0, 0, Math.PI * 2);
@@ -94,7 +98,7 @@ export class RobotFace {
 
     // small mouth
     const my = h * 0.8 + bob;
-    ctx.strokeStyle = "#37e0ff";
+    ctx.strokeStyle = this.state === "urgent" ? "#ffb454" : "#37e0ff";
     ctx.lineWidth = Math.max(3, h * 0.011);
     ctx.lineCap = "round";
     ctx.beginPath();

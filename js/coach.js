@@ -6,6 +6,8 @@
 
 import { speak } from "./speech.js";
 import { coachFeedback } from "./claude.js";
+import { logSession } from "./tracking.js";
+import { CoinField } from "./collect.js";
 
 const MP_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
@@ -110,6 +112,8 @@ export class Coach {
     this.exerciseIdx = 0;
     this.lastSpokenHint = "";
     this.lastHintAt = 0;
+    this.coinField = new CoinField();
+    this.sessionStart = performance.now();
     this.resetSession();
   }
 
@@ -129,6 +133,8 @@ export class Coach {
     this.peakAngle = 0;
     this.lastRepAt = 0;
     this.lastFeedbackRep = 0;
+    if (this.coinField) this.coinField.resetSession();
+    this.sessionStart = performance.now();
   }
 
   get exercise() { return EXERCISES[this.exerciseIdx]; }
@@ -206,7 +212,13 @@ export class Coach {
       drawVideoCoverMirrored(ctx, this.video, w, h);
       const lm = result.landmarks && result.landmarks[0];
       const visible = lm ? this.checkVisibility(lm) : false;
-      if (lm) this.drawSkeleton(ctx, lm, w, h, visible);
+      if (lm) {
+        this.drawSkeleton(ctx, lm, w, h, visible);
+        if (this.state === "active") {
+          this.coinField.update([lm[15], lm[16]]); // Left and right wrists
+        }
+        this.coinField.draw(ctx, w, h);
+      }
       this.process(lm, visible);
     }
     requestAnimationFrame(() => this.loop());
@@ -293,6 +305,10 @@ export class Coach {
     if (this.phase === "down" && angle > this.upT) {
       this.phase = "up";
       this.peakAngle = angle;
+      // Spawn a coin when reaching the top phase
+      const spawnX = 0.2 + Math.random() * 0.6; // random x across middle
+      const spawnY = 0.15 + Math.random() * 0.15; // upper area
+      this.coinField.spawn(spawnX, spawnY);
     } else if (this.phase === "up") {
       this.peakAngle = Math.max(this.peakAngle, angle);
       if (angle < this.downT && performance.now() - this.lastRepAt > MIN_REP_GAP_MS) {
@@ -384,9 +400,21 @@ export class Coach {
   async endSession() {
     const n = this.reps;
     this.stop();
+    const coins = this.coinField.getSessionCoins();
     const msg = n > 0
-      ? `Fantastic! ${n} repetitions — I am proud of you!`
+      ? `Fantastic! ${n} repetitions${coins > 0 ? ` and ${coins} coins` : ""} — I am proud of you!`
       : "Okay, whenever you are ready.";
+      
+    if (n > 0 || coins > 0) {
+      logSession({
+        exerciseType: this.exercise.name,
+        targetReps: 10,
+        repsCompleted: this.reps,
+        romEstimate: this.maxSeen > this.minSeen ? this.maxSeen - this.minSeen : 0,
+        durationSec: (performance.now() - this.sessionStart) / 1000
+      });
+    }
+
     await speak(msg);
     this.resetSession();
   }
