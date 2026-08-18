@@ -11,7 +11,7 @@ import { initFaceSync, initStageSync } from "./sync.js";
 import { PersonTracker } from "./tracker.js";
 import { seedDemoIfEmpty, logSession, logSOSEvent, getHeatmapData, getRomTrend, buildWeeklySpeech, exportCSV, exportPlainText, buildClinicalSummary, getEntries } from "./tracking.js";
 import { RobotLink, hasBluetooth } from "./robot.js";
-import { startARGame, stopARGame } from "./ar-game.js";
+import { startARGame, stopARGame } from "./ar-game.js?v=2";
 
 const $ = (id) => document.getElementById(id);
 
