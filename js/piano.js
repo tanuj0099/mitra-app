@@ -9,8 +9,18 @@ const HAND_MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_lan
 
 const TIP_IDS = [4, 8, 12, 16, 20]; // thumb..pinky
 const TIP_COLORS = ["#ff8fa3", "#ffb454", "#7dffa0", "#37e0ff", "#c792ea"];
-// C-major pentatonic across two octaves — no wrong notes
-const NOTES = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25, 783.99, 880.0];
+
+// Happy Birthday Scale (C4 to C5 + Bb)
+const NOTES = [261.63, 293.66, 329.63, 349.23, 392.0, 440.0, 466.16, 523.25];
+const NOTE_NAMES = ["C", "D", "E", "F", "G", "A", "Bb", "High C"];
+
+const HAPPY_BIRTHDAY = [
+  0, 0, 1, 0, 3, 2, // C C D C F E
+  0, 0, 1, 0, 4, 3, // C C D C G F
+  0, 0, 7, 5, 3, 2, 1, // C C HighC A F E D
+  6, 6, 5, 3, 4, 3  // Bb Bb A F G F
+];
+
 const SPEED_TRIGGER = 0.022;   // normalized movement per frame that counts as a flick
 const NOTE_COOLDOWN_MS = 170;  // per finger
 
@@ -41,6 +51,8 @@ export class AirMusic {
     this.onNote = null;  // (idx, vol) — app hook for remote synthesis
     this.fingers = {};   // id -> {x, y, lastNoteAt, trail: []}
     this.ripples = [];   // {x, y, color, t0}
+    this.songIndex = 0;
+    this.songCompleted = false;
   }
 
   async start() {
@@ -67,6 +79,8 @@ export class AirMusic {
     if (this.audio.state === "suspended") this.audio.resume();
     this.fingers = {};
     this.ripples = [];
+    this.songIndex = 0;
+    this.songCompleted = false;
     this.running = true;
     this.loop();
   }
@@ -93,6 +107,17 @@ export class AirMusic {
     // it (iOS refuses to render WebAudio while the mic session is active).
     if (this.onNote) this.onNote(idx, vol);
     synthNote(this.audio, this.localGain, NOTES[idx], vol);
+
+    // Song mode progression
+    if (!this.songCompleted) {
+      if (idx === HAPPY_BIRTHDAY[this.songIndex]) {
+        this.songIndex++;
+        if (this.songIndex >= HAPPY_BIRTHDAY.length) {
+          this.songCompleted = true;
+          setTimeout(() => { this.songIndex = 0; this.songCompleted = false; }, 5000);
+        }
+      }
+    }
   }
 
   loop() {
@@ -183,6 +208,32 @@ export class AirMusic {
     ctx.textAlign = "left";
     ctx.fillText("♪ high", w * 0.015, h * 0.08);
     ctx.fillText("♪ low", w * 0.015, h * 0.95);
+
+    // Happy Birthday UI Prompts
+    ctx.textAlign = "center";
+    if (this.songCompleted) {
+      ctx.fillStyle = "#7dffa0";
+      ctx.font = `bold ${Math.round(h * 0.08)}px sans-serif`;
+      ctx.fillText("🎉 Happy Birthday! 🎉", w / 2, h / 2);
+    } else {
+      const targetNoteIdx = HAPPY_BIRTHDAY[this.songIndex];
+      const targetNoteName = NOTE_NAMES[targetNoteIdx];
+      
+      // Draw target zone highlights
+      const zoneHeight = h / NOTES.length;
+      const zoneY = h - ((targetNoteIdx + 1) * zoneHeight);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+      ctx.fillRect(0, zoneY, w, zoneHeight);
+
+      // Draw instructions
+      ctx.fillStyle = "#fff";
+      ctx.font = `bold ${Math.round(h * 0.06)}px sans-serif`;
+      ctx.fillText(`Wave your hand to hit: ${targetNoteName}`, w / 2, h * 0.15);
+      
+      ctx.font = `${Math.round(h * 0.04)}px sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      ctx.fillText(`Note ${this.songIndex + 1} of ${HAPPY_BIRTHDAY.length}`, w / 2, h * 0.22);
+    }
 
     requestAnimationFrame(() => this.loop());
   }
