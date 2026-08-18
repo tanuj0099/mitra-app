@@ -878,3 +878,8 @@ if (sosNumberInput) {
     localStorage.setItem("mitra_sos_number", e.target.value);
   });
 }
+
+// Initialize Lucide icons
+if (window.lucide) {
+  lucide.createIcons();
+}

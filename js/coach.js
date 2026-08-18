@@ -10,7 +10,7 @@ import { logSession } from "./tracking.js";
 import { CoinField } from "./collect.js";
 
 const MP_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
-const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
 
 // Landmark indices
 const L = { LS: 11, RS: 12, LE: 13, RE: 14, LW: 15, RW: 16, LH: 23, RH: 24, LK: 25, RK: 26, LA: 27, RA: 28 };
@@ -333,28 +333,53 @@ export class Coach {
     ctx.save();
     ctx.translate(w, 0);
     ctx.scale(-1, 1);
-    const lineColor = visible ? "rgba(55, 224, 255, 0.9)" : "rgba(255, 180, 84, 0.8)";
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    const lineColor = visible ? "rgba(55, 224, 255, 0.6)" : "rgba(255, 180, 84, 0.4)";
     ctx.strokeStyle = lineColor;
-    ctx.shadowColor = lineColor;
-    ctx.shadowBlur = w * 0.008;
-    ctx.lineWidth = Math.max(3, w * 0.004);
+    ctx.shadowColor = visible ? "rgba(55, 224, 255, 0.8)" : "rgba(255, 180, 84, 0.8)";
+    ctx.shadowBlur = w * 0.015;
+    ctx.lineWidth = Math.max(4, w * 0.005);
     for (const [a, b] of this.PoseLandmarker.POSE_CONNECTIONS.map(c => [c.start, c.end])) {
-      if (a > 32 || b > 32) continue;
+      // Filter out face landmarks (0-10) and fine finger details (17-22) for a cleaner look
+      if (a < 11 || b < 11 || (a >= 17 && a <= 22) || (b >= 17 && b <= 22) || a > 32 || b > 32) continue;
       ctx.beginPath();
       ctx.moveTo(lm[a].x * w, lm[a].y * h);
       ctx.lineTo(lm[b].x * w, lm[b].y * h);
       ctx.stroke();
     }
-    ctx.shadowBlur = 0;
+    
+    // Draw premium glowing joints
     for (let i = 11; i <= 28; i++) {
+      if (i >= 17 && i <= 22) continue; // skip finger joints
       const active = this.exercise.activeJoints.includes(i);
-      const r = Math.max(4, w * (active ? 0.009 : 0.005));
+      const r = Math.max(6, w * (active ? 0.012 : 0.008));
+      const cx = lm[i].x * w;
+      const cy = lm[i].y * h;
+      
       ctx.beginPath();
-      ctx.arc(lm[i].x * w, lm[i].y * h, r, 0, Math.PI * 2);
-      ctx.fillStyle = active ? "#7dffa0" : "#ffb454";
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      
+      const grad = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r);
+      if (active) {
+        grad.addColorStop(0, "rgba(255, 255, 255, 1)");
+        grad.addColorStop(0.5, "rgba(125, 255, 160, 0.9)");
+        grad.addColorStop(1, "rgba(125, 255, 160, 0.2)");
+        ctx.shadowColor = "#7dffa0";
+      } else {
+        grad.addColorStop(0, "rgba(255, 255, 255, 0.8)");
+        grad.addColorStop(0.5, "rgba(55, 224, 255, 0.7)");
+        grad.addColorStop(1, "rgba(55, 224, 255, 0.1)");
+        ctx.shadowColor = "#37e0ff";
+      }
+      
+      ctx.fillStyle = grad;
+      ctx.shadowBlur = w * 0.02;
       ctx.fill();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.shadowBlur = 0;
       ctx.stroke();
     }
     ctx.restore();

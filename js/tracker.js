@@ -4,7 +4,7 @@
 // States per the hardware spec: IDLE → FOUND → TRACKING → LOST.
 
 const MP_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
-const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task";
 
 const LOST_TIMEOUT_MS = 1500;
 const SEND_MIN_INTERVAL_MS = 100;  // ≤10 Hz to the servo, per spec

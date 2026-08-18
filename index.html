@@ -13,7 +13,7 @@
   <!-- Rotate-your-device overlay (portrait only) -->
   <div id="rotate-overlay">
     <div class="rotate-inner">
-      <div class="rotate-icon">📱↻</div>
+      <div class="rotate-icon"><i data-lucide="smartphone"></i> <i data-lucide="rotate-cw"></i></div>
       <p>Please rotate your device to landscape</p>
     </div>
   </div>
@@ -27,8 +27,8 @@
   <!-- Stage (laptop) pairing modal: enter the phone's 4-letter code once -->
   <div id="stage-code-modal" class="modal hidden">
     <div class="modal-card code-card">
-      <h2>🖥 Big screen</h2>
-      <p class="hint">Enter the 4-letter code shown in Mitra's ⚙️ settings on the phone</p>
+      <h2><i data-lucide="monitor"></i> Big screen</h2>
+      <p class="hint">Enter the 4-letter code shown in Mitra's <i data-lucide="settings"></i> settings on the phone</p>
       <input id="room-input" class="room-input" maxlength="6" placeholder="CODE" autocomplete="off" autocapitalize="characters" />
       <button id="btn-stage-go" class="pill-btn accent">Enter</button>
     </div>
@@ -38,26 +38,26 @@
   <section id="screen-home" class="screen">
     <canvas id="home-face" class="face-canvas"></canvas>
     <nav id="home-nav" class="icon-nav">
-      <button class="mode-btn" data-mode="chat" title="Talk">💬</button>
-      <button class="mode-btn" data-mode="coach" title="Exercise">🏋️</button>
-      <button class="mode-btn" data-mode="progress" title="Progress">📈</button>
-      <button class="mode-btn" data-mode="entertain" title="Fun">🎵</button>
+      <button class="mode-btn" data-mode="chat" title="Talk"><i data-lucide="message-square"></i></button>
+      <button class="mode-btn" data-mode="coach" title="Exercise"><i data-lucide="activity"></i></button>
+      <button class="mode-btn" data-mode="progress" title="Progress"><i data-lucide="trending-up"></i></button>
+      <button class="mode-btn" data-mode="entertain" title="Fun"><i data-lucide="music"></i></button>
     </nav>
-    <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
+    <button id="btn-settings" class="icon-btn" title="Settings"><i data-lucide="settings"></i></button>
   </section>
 
   <!-- Chat: face + typed fallback -->
   <section id="screen-chat" class="screen">
     <canvas id="chat-face" class="face-canvas"></canvas>
     <nav class="icon-nav">
-      <button id="btn-mic" class="mode-btn" title="Speak once">🎤</button>
-      <button id="btn-type" class="mode-btn" title="Type instead">⌨️</button>
+      <button id="btn-mic" class="mode-btn" title="Speak once"><i data-lucide="mic"></i></button>
+      <button id="btn-type" class="mode-btn" title="Type instead"><i data-lucide="keyboard"></i></button>
     </nav>
     <div id="type-bar" class="type-bar hidden">
       <input id="type-input" type="text" placeholder="Type your message…" autocomplete="off" />
-      <button id="type-send">➤</button>
+      <button id="type-send"><i data-lucide="send"></i></button>
     </div>
-    <button class="icon-btn back" data-back>←</button>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
   </section>
 
   <!-- Coach: camera + skeleton overlay + HUD -->
@@ -72,32 +72,32 @@
       <div id="coach-feedback">Loading pose model…</div>
     </div>
     <div class="coach-controls icon-nav">
-      <button id="btn-switch-exercise" class="mode-btn" title="Switch exercise">🔄</button>
-      <button id="btn-ask-coach" class="mode-btn" title="Ask coach">🧠</button>
-      <button id="btn-end-session" class="mode-btn" title="End session">✖</button>
+      <button id="btn-switch-exercise" class="mode-btn" title="Switch exercise"><i data-lucide="refresh-cw"></i></button>
+      <button id="btn-ask-coach" class="mode-btn" title="Ask coach"><i data-lucide="brain"></i></button>
+      <button id="btn-end-session" class="mode-btn" title="End session"><i data-lucide="x"></i></button>
     </div>
-    <button class="icon-btn back" data-back>←</button>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
   </section>
 
   <!-- Entertain -->
   <section id="screen-entertain" class="screen">
     <canvas id="ent-face" class="face-canvas"></canvas>
     <nav id="ent-nav" class="icon-nav">
-      <button class="ent-btn" data-ent="story" title="Story">📖</button>
-      <button class="ent-btn" data-ent="joke" title="Joke">😄</button>
-      <button class="ent-btn" data-ent="riddle" title="Riddle">🧩</button>
-      <button class="ent-btn" data-ent="tune" title="Tune">🎼</button>
-      <button class="ent-btn" data-ent="piano" title="Air Music">🎹</button>
+      <button class="ent-btn" data-ent="story" title="Story"><i data-lucide="book-open"></i></button>
+      <button class="ent-btn" data-ent="joke" title="Joke"><i data-lucide="smile"></i></button>
+      <button class="ent-btn" data-ent="riddle" title="Riddle"><i data-lucide="puzzle"></i></button>
+      <button class="ent-btn" data-ent="tune" title="Tune"><i data-lucide="headphones"></i></button>
+      <button class="ent-btn" data-ent="piano" title="Air Music"><i data-lucide="radio"></i></button>
     </nav>
-    <button class="icon-btn back" data-back>←</button>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
   </section>
 
   <!-- Air Music: wave fingers in the air to play notes -->
   <section id="screen-piano" class="screen">
     <video id="piano-video" playsinline muted></video>
     <canvas id="piano-overlay"></canvas>
-    <div id="piano-hint">🎶 Wave your fingers in the air — higher hand, higher note!</div>
-    <button class="icon-btn back" data-back>←</button>
+    <div id="piano-hint"><i data-lucide="music"></i> Wave your fingers in the air — higher hand, higher note!</div>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
   </section>
 
   <!-- Progress -->
@@ -113,7 +113,7 @@
         <button id="btn-export-csv" class="pill-btn">Copy Data</button>
       </div>
     </div>
-    <button class="icon-btn back" data-back>←</button>
+    <button class="icon-btn back" data-back><i data-lucide="arrow-left"></i></button>
   </section>
 
   <!-- SOS Screen -->
@@ -137,30 +137,30 @@
       <div id="stage-feedback"></div>
     </div>
     <div class="stage-idle" id="stage-idle">
-      <div class="stage-emoji">🤖</div>
+      <div class="stage-emoji"><i data-lucide="bot"></i></div>
       <p id="stage-status">Connecting to Mitra…</p>
       <p class="stage-sub">Exercises and music will appear on this screen</p>
     </div>
-    <button id="btn-robot" class="icon-btn" title="Connect robot head (Bluetooth)">🦾</button>
+    <button id="btn-robot" class="icon-btn" title="Connect robot head (Bluetooth)"><i data-lucide="cpu"></i></button>
   </section>
 
   <!-- Global mic toggle (tap on = keeps listening, tap off = stops) -->
-  <button id="mic-toggle" class="hidden" title="Toggle microphone">🎤</button>
+  <button id="mic-toggle" class="hidden" title="Toggle microphone"><i data-lucide="mic"></i></button>
   <!-- Shown on the phone when the big screen is genuinely linked -->
-  <div id="stage-dot" class="hidden" title="Big screen connected">🖥</div>
+  <div id="stage-dot" class="hidden" title="Big screen connected"><i data-lucide="monitor"></i></div>
 
   <!-- Persistent SOS Button -->
-  <button id="sos-toggle" title="Press and hold for SOS">🆘</button>
+  <button id="sos-toggle" title="Press and hold for SOS"><i data-lucide="life-buoy"></i></button>
 
   <!-- Settings modal -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal-card">
       <h2>Settings</h2>
-      <div class="code-row">🖥 Big screen code: <b id="room-code">—</b></div>
+      <div class="code-row"><i data-lucide="monitor"></i> Big screen code: <b id="room-code">—</b></div>
       <label>Mitra's voice
         <div class="voice-row">
           <select id="voice-select"></select>
-          <button id="btn-test-voice" class="pill-btn">▶ Try</button>
+          <button id="btn-test-voice" class="pill-btn"><i data-lucide="play"></i> Try</button>
         </div>
       </label>
       <label>Claude API key (optional — enables real AI)
@@ -181,6 +181,7 @@
   </div>
 
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
   <script type="module" src="js/app.js?v=12"></script>
 </body>
 </html>
